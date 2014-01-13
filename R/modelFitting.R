@@ -28,8 +28,7 @@ fit.model <-
     dat <- paste("data", data, sep = ' = ')
     fam <- paste("family", family, sep = ' = ')
     
-    
-    # Deal with extra arguments (eg. weights, offset ...)
+  # Deal with extra arguments (eg. weights, offset ...)
     xarg <- list(...)
     xargs <- paste(names(xarg), xarg, sep = ' = ', collapse = ', ')
     

@@ -1,18 +1,15 @@
 iNZightChild
 ============
 
-Each sub moduel is now placing here....They are just GUI. 
-
-mr.main.R: multiple response moduel UI
+Each sub module is now placed here... they are just GUI interfaces.
 
 
-time-series-ui.R: multiple response moduel UI
+- mr.main.R: multiple response module UI
 
+- time-series-ui.R: multiple response module UI
 
-scatterPlotMatrix: scatterPlotMatrix moduel UI
+- scatterPlotMatrix: scatterPlotMatrix module UI
 
+- plot3D mode.R: plot3D module UI
 
-plot3D mode.R: plot3D moduel UI
-
-
-modelFitting.R: modelFitting moduel UI
+- modelFitting.R: modelFitting module UI
