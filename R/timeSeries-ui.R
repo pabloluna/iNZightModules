@@ -1,5 +1,10 @@
 # This is a module used for graphical time series analysis.
 timeSeries <- function(e) {
+  have.inzts <- "package:iNZightTS" %in% search()
+  if (!have.inzts)
+    library(iNZightTS)
+  
+  
   tsStructure <- list(start = NA, frequency = NA)
   fully.loaded <- FALSE
   tswin <- gwindow(title = "Time Series", expand = FALSE)
@@ -543,8 +548,10 @@ get.ts.structure <- function(vardata) {
 
 
 tsPlot <- function(var.df, start, frequency, animate, env) {
-  vars <- list(data = var.df, start = start, freq = frequency)
-  plot.raw.data(vars, animate = animate, e = env)
+  #vars <- list(data = var.df, start = start, freq = frequency)
+  vars <- iNZightTS(data = var.df, start = start, freq = frequency)
+  #plot.raw.data(vars, animate = animate, e = env)
+  rawplot(vars.animate = animate, e = env)
 }
 
 tsDecompose <- function(var.df, start, frequency) {
