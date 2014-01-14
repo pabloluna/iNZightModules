@@ -1,5 +1,6 @@
 # This is a module used for graphical time series analysis.
 timeSeries <- function(e) {
+
   tsStructure <- list(start = NA, frequency = NA)
   fully.loaded <- FALSE
   tswin <- gwindow(title = "Time Series", expand = FALSE)

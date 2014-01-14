@@ -28,7 +28,7 @@ fit.model <-
     dat <- paste("data", data, sep = ' = ')
     fam <- paste("family", family, sep = ' = ')
     
-  # Deal with extra arguments (eg. weights, offset ...)
+    # Deal with extra arguments (eg. weights, offset ...)
     xarg <- list(...)
     xargs <- paste(names(xarg), xarg, sep = ' = ', collapse = ', ')
     
@@ -38,11 +38,13 @@ fit.model <-
         ## Simple linear regression model:
         #args <- paste(Formula, xargs)
         args <- paste(Formula, dat, xargs, sep = ', ')
+        args <- substring(args, 1, nchar(args)-1)
         call <- paste('lm(', args, ')', sep = '')
       } else {
         ## general linear model:
         #args <- paste(Formula, ",", fam, xargs)
         args <- paste(Formula, dat, fam, xargs, sep = ', ')
+        args <- substring(args, 1, nchar(args)-1)
         call <- paste('glm(', args, ')', sep = '')
       }
     } else if (design == 'survey') {
@@ -59,6 +61,7 @@ fit.model <-
       # set up the svyglm function call
       args <- paste(Formula, fam, "design = svy.design",
                     xargs, sep = ', ')
+      args <- substring(args, 1, nchar(args)-1)
       call <- paste('svyglm(', args, ')', sep = '')
     } else if (design == 'experiment') {
       ## experimental design:
@@ -128,7 +131,7 @@ modelFitting = function(e) {
   }
   
   modellingWinOpened <- TRUE
-  modellingWin <- gwindow("Model Fitting2(test)", height = 800, 
+  modellingWin <- gwindow("Model Fitting", height = 800, 
                           width = 815)
   tag(modellingWin, "dataSet") <- tag(e$obj, "dataSet")
   
@@ -151,7 +154,7 @@ modelFitting = function(e) {
   mainGp <- gvbox(container = modellingWin,use.scrollwindow = TRUE)
   
   
-  title <- glabel("Model Response using variables of interest and Confounders",cont=mainGp)
+  title <- glabel("Model Response using Variable of Interest and Confounders",cont=mainGp)
   font(title) <- list(weight = "bold",size=15)
   
   
@@ -160,7 +163,7 @@ modelFitting = function(e) {
   paned <- gpanedgroup(cont = mainGp)
   lgroup <- ggroup(cont=paned,horizontal=FALSE,expand=TRUE)
   original.label <- NULL
-  response.varlist.panel <- gframe("Variables Name list",cont=lgroup)
+  response.varlist.panel <- gframe("Variables",cont=lgroup)
   # new gtable is coming from here
   ## find icons by class
   myClass <- function(df) {
@@ -183,7 +186,7 @@ modelFitting = function(e) {
   
   m <- names(mydata)
   type <- sapply(mydata, class)
-  response.type.df = data.frame(varableNames=m, Type=type)
+  response.type.df = data.frame(Name=m, Type=type)
   response.type.df[,1] <- as.character(response.type.df[,1])
   response.type.df <- myClass(response.type.df)
   response.varlist <- gtable(response.type.df, icon.FUN=icon.FUN, 
@@ -244,10 +247,10 @@ modelFitting = function(e) {
     if (svalue(transform.drop.list) == "NULL")
       svalue(statusbar) <- paste("choosing", h$dropdata, "now")
     else{
-      if (h$dropdata %in% names(test.factorset) 
-          & 
-            (svalue(transform.drop.list) == "log"| svalue(transform.drop.list) == "root"))
-        return(svalue(statusbar) <- paste(h$dropdata,"is factor and does not support numeric transformation"))
+      #if (h$dropdata %in% names(test.factorset) 
+      #    & 
+      #      (svalue(transform.drop.list) == "log"| svalue(transform.drop.list) == "root"))
+      #  return(svalue(statusbar) <- paste(h$dropdata,"is factor and does not support numeric transformation"))
       
       extra <- paste(",",svalue(argument.type))
       if (extra==", ")
@@ -255,8 +258,8 @@ modelFitting = function(e) {
       
       if (svalue(argument.type)!=""
           & 
-            (svalue(transform.drop.list) == "log"| svalue(transform.drop.list) == "as.numeric"))
-        return(svalue(statusbar) <- paste("we are not provide extra argument of log or as.numeric so far; 
+            (svalue(transform.drop.list) == "log"))
+        return(svalue(statusbar) <- paste("we are not provide extra argument of log so far; 
                                           This may leads to a wrong fitting model."))
       
       svalue(statusbar) <- paste("choosing", 
@@ -270,10 +273,10 @@ modelFitting = function(e) {
       svalue(m.f.list) <- "Least Squares"
     
     if (length(test.factorset[[svalue(moving.y)]]) > 2 & classset[svalue(moving.y)] != "numeric" )
-      svalue(m.f.list) <- "Poisson Regs"
+      svalue(m.f.list) <- "Poisson regreesion (count data)"
     
     if (length(test.factorset[[svalue(moving.y)]]) == 2)
-      svalue(m.f.list) <- "Logistics Regs"
+      svalue(m.f.list) <- "Logistics regression (binary response)"
   })
   main.layout[1, 3] <- moving.y
   
@@ -291,7 +294,7 @@ modelFitting = function(e) {
   
   t.y.label <- glabel("Transform \n   y")
   t.y.layout <- glayout()
-  transform.drop.list <- gcombobox(c("NULL", "log", "root", "as.numeric", "as.catergory"))
+  transform.drop.list <- gcombobox(c("NULL", "log", "root"))
   size(transform.drop.list) <- c(80, 20)
   addHandlerChanged(transform.drop.list, handler = function(h, ...) {
     
@@ -304,13 +307,13 @@ modelFitting = function(e) {
       
       if (svalue(argument.type)!=""
           & 
-            (svalue(transform.drop.list) == "log"| svalue(transform.drop.list) == "as.numeric"))
-        return(svalue(statusbar) <- paste("we are not provide extra argument of log or as.numeric so far; This may leads to a wrong fitting model."))
+            (svalue(transform.drop.list) == "log"))
+        return(svalue(statusbar) <- paste("we are not provide extra argument of log so far; This may leads to a wrong fitting model."))
       
-      if (svalue(moving.y) %in% names(test.factorset) 
-          & 
-            (svalue(transform.drop.list) == "log"| svalue(transform.drop.list) == "root"))
-        return(svalue(statusbar) <- paste(svalue(moving.y),"is factor and does not support numeric transformation"))
+      #if (svalue(moving.y) %in% names(test.factorset) 
+      #    & 
+      #      (svalue(transform.drop.list) == "log"| svalue(transform.drop.list) == "root"))
+      #  return(svalue(statusbar) <- paste(svalue(moving.y),"is factor and does not support numeric transformation"))
       
       if(svalue(h$obj)=="NULL")
         return(svalue(statusbar) <- paste("choosing", svalue(moving.y), "now"))
@@ -343,8 +346,8 @@ modelFitting = function(e) {
       
       if (svalue(h$obj)!=""
           & 
-            (svalue(transform.drop.list) == "log"| svalue(transform.drop.list) == "as.numeric"))
-        return(svalue(statusbar) <- paste("we are not provide extra argument of log or as.numeric so far; 
+            (svalue(transform.drop.list) == "log"))
+        return(svalue(statusbar) <- paste("we are not provide extra argument of log so far; 
                                           This may leads to a wrong fitting model."))
       
       if (svalue(h$obj)=="" & svalue(transform.drop.list) == "root")
@@ -365,16 +368,16 @@ modelFitting = function(e) {
   # but we add sth if "lm" to "glm" or delete sth if "glm" to "lm"
   place <- "0"
   m.f.label <- glabel("Modeling \nframework")
-  m.f.list <-gcombobox(c("Least Squares","Logistics Regs","Poisson Regs"),
+  m.f.list <-gcombobox(c("Least Squares","Logistics regression (binary response)","Poisson regression (binary response)"),
                        handler = function(h, ...) {
                          
                          
-                         if ((svalue(h$obj) == "Logistics Regs" | svalue(h$obj) == "Poisson Regs") & place == "0"){ 
+                         if ((svalue(h$obj) == "Logistics regression (binary response)" | svalue(h$obj) == "Poisson regression (binary response)") & place == "0"){ 
                            enabled(tblist$normchecks) <- FALSE
                            add(nonstandard.layout, extraargs.frame)
                            place <<- "1"
                          }
-                         if ((svalue(h$obj) == "Logistics Regs" | svalue(h$obj) == "Poisson Regs") & place == "1"){
+                         if ((svalue(h$obj) == "Logistics regression (binary response)" | svalue(h$obj) == "Poisson regression (binary response)") & place == "1"){
                            return()
                          }
                          if ( svalue(h$obj) == "Least Squares" ){
@@ -389,7 +392,7 @@ modelFitting = function(e) {
   main.layout[2, 5, expand=T] <- m.f.list 
   
   d.s.label <- glabel("Data \nStructure")
-  d.s.list <- gcombobox(c("Standard", "Complex Survey", "Designed Expt"),
+  d.s.list <- gcombobox(c("Standard", "Complex Survey"),
                         handler = function(h, ...) {
                           if (svalue(h$obj) == "Standard") {
                             svalue(statusbar) <- "Use modeling framework to select lm/glm"
@@ -402,7 +405,7 @@ modelFitting = function(e) {
                             add(nonstandard.layout, aov.frame)
                           }
                           if (svalue(h$obj) == "Complex Survey"){
-                            svalue(statusbar) <- "survey design is now only support strat and 1-level cluster."
+                            svalue(statusbar) <- "survey structure currently only supports strata and 1-level cluster designs."
                             delete(nonstandard.layout, aov.frame)
                             add(nonstandard.layout, svy.frame)  
                           }
@@ -420,7 +423,7 @@ modelFitting = function(e) {
   quasi.edit <- gcombobox(c(FALSE, TRUE))
   offset.label <- glabel("offset")
   offset.edit <- gedit(initial.msg = "accept expression here only")
-  extraargs.frame <- gframe("Extra arguments provides")
+  extraargs.frame <- gframe("Extra arguments: ")
   extraargs.layout <- glayout(cont = extraargs.frame)
   extraargs.layout[1, 1] <- quasi.label
   extraargs.layout[1, 2] <- quasi.edit
@@ -704,7 +707,7 @@ modelFitting = function(e) {
                          Transform.buttonI <- paste0("log(", entry, ")")
                          remove.action()
                          addVarstoPanel(Transform.buttonI) 
-                           
+                         
                        }),
          
          two = gaction("sqrt", 
@@ -737,7 +740,7 @@ modelFitting = function(e) {
                           Transform.buttonI <- paste0("poly(", entry, ",", svalue(degreeI), ")")
                           remove.action()
                           addVarstoPanel(Transform.buttonI) 
-                            
+                          
                         }),
          
          #five = gaction("smooth",
@@ -747,16 +750,16 @@ modelFitting = function(e) {
          #                  addVarstoPanel(Transform.buttonI) 
          #                  remove.action() 
          #                }),
-         five = gaction("offset", 
-                        handler = function(h, ...) {
-                          entry <- Entry()
-                          if (any(is.null(entry)))
-                            return()
-                          Transform.buttonI <- paste0("offset(", entry, ")")
-                          remove.action() 
-                          addVarstoPanel(Transform.buttonI) 
-                          
-                        }),
+         #five = gaction("offset", 
+         #                handler = function(h, ...) {
+         #                  entry <- Entry()
+         #                  if (any(is.null(entry)))
+         #                    return()
+         #                  Transform.buttonI <- paste0("offset(", entry, ")")
+         #                  remove.action() 
+         #                  addVarstoPanel(Transform.buttonI) 
+         #                  
+         #                }),
          six = gaction("relevel", 
                        handler = function(h, ...){
                          # This one have to be single choice
@@ -764,10 +767,10 @@ modelFitting = function(e) {
                          if (any(is.null(entry)))
                            return()
                          if (length(entry) > 1) 
-                           return(svalue(statusbar)<-"relevel only support single selecte variable")
+                           return(svalue(statusbar)<-"relevel only support single selected variable")
                          selected.level <- NULL
-                         if(!(entry %in% names(test.factorset))) 
-                           return(svalue(statusbar)<- paste(entry, "is not factor and no level can be reorder."))
+                         #if(!(entry %in% names(test.factorset))) 
+                         #   return(svalue(statusbar)<- paste(entry, "is not factor and no level can be reorder."))
                          relevel.window <- gwindow("relevel", width=300, height=20, visible=TRUE)
                          relevel.window.group <- ggroup(cont = relevel.window)
                          relevel.window.label1 <- glabel(paste("relevel(", entry, ","), 
@@ -841,7 +844,7 @@ modelFitting = function(e) {
     Id <- newlabel.class[original.order,2] != original.label
     
     if (any(Id)) {
-      target.var.change = newlabel.class[original.order,][id,]
+      target.var.change = newlabel.class[original.order,][Id,]
       target.var.change[target.var.change[,2] == "Num",2] <- "numeric" 
       target.var.change[target.var.change[,2] == "Cat",2] <- "factor"
       transform.command.core <- paste0(target.var.change[,1]," = ","as.", target.var.change[,2],"(",target.var.change[,1],")", collapse = " , ")
@@ -865,22 +868,22 @@ modelFitting = function(e) {
       y <- paste0("root(", svalue(moving.y), ",", svalue(argument.type), ")")
     if (svalue(transform.drop.list) == "root" & svalue(argument.type)=="")
       return(svalue(statusbar) <- paste("provide nth root before fitting the model"))
-    if (svalue(transform.drop.list) == "as.numeric")
-      y <- paste0("as.numeric(", svalue(moving.y), ")")
+    #if (svalue(transform.drop.list) == "as.numeric")
+    #  y <- paste0("as.numeric(", svalue(moving.y), ")")
     
     x <-  paste0(c(EffectOfInterests.list, Confounders.list), collapse = " + ")
     
     target.family <- svalue(m.f.list) 
     if (target.family == "Least Squares") 
       target.family = "gaussian"
-    if (target.family == "Logistics Regs" & !svalue(quasi.edit)) 
+    if (target.family == "Logistics regression (binary response)" & !svalue(quasi.edit)) 
       target.family = "\"binomial\""
-    if (target.family == "Logistics Regs" & svalue(quasi.edit)) 
+    if (target.family == "Logistics regression (binary response)" & svalue(quasi.edit)) 
       target.family = "\"quasibinomial\""
     
-    if (target.family == "Poisson Regs" & !svalue(quasi.edit)) 
+    if (target.family == "Poisson regression (binary response)" & !svalue(quasi.edit)) 
       target.family = "\"poisson\""
-    if (target.family == "Poisson Regs" & svalue(quasi.edit))
+    if (target.family == "Poisson regression (binary response)" & svalue(quasi.edit))
       target.family = "\"quasipoisson\""
     
     target.design <- svalue(d.s.list) 
@@ -1056,7 +1059,7 @@ modelFitting = function(e) {
   main.layout[11,4:5 ] <- model.buttons.group   ###%%%###
   
   #toolbar list
-
+  
   
   listOfModels <- "Current model not yet chosen"
   names(listOfModels) <-  "        - "
@@ -1090,17 +1093,17 @@ modelFitting = function(e) {
   
   tblist = list()
   tblist$Summary <- list(a1 = gaction(label = "iNZightSummary(current.model)", tooltip = "try1", 
-                                     icon = "symbol_diamond", handler = function(h, ...) getModelSummary()))
+                                      icon = "symbol_diamond", handler = function(h, ...) getModelSummary()))
   tblist[2] <- gseparator(parent = modellingWin, horizontal = FALSE)
-  tblist$`Factors Level` = list(c1 = gaction("Factor Means", tooltip = NULL, icon = NULL,
-                                             handler = function(h, ...) print("factorMeans(model_1)")),
-                                c2 = gaction("Adjusted Means", tooltip = NULL, icon = NULL,
-                                             handler = function(h, ...) print("adjustedMeans(model_1)")),
-                                c3 = gaction("Comparison Plot", tooltip = NULL, icon = "symbol_diamond",
-                                             handler = function(h, ...) chooseFactorComparisonVars(printMat = FALSE)),
-                                c4 = gaction("Comparison Matrix", tooltip = NULL, icon = "symbol_square",
-                                             handler = function(h, ...) chooseFactorComparisonVars(printMat = TRUE))
-                                )
+  tblist$`Factors Level` = list(#c1 = gaction("Factor Means", tooltip = NULL, icon = NULL,
+    #             handler = function(h, ...) print("factorMeans(model_1)")),
+    #c2 = gaction("Adjusted Means", tooltip = NULL, icon = NULL,
+    #             handler = function(h, ...) print("adjustedMeans(model_1)")),
+    c3 = gaction("Comparison Plot", tooltip = NULL, icon = "symbol_diamond",
+                 handler = function(h, ...) chooseFactorComparisonVars(printMat = FALSE)),
+    c4 = gaction("Comparison Matrix", tooltip = NULL, icon = "symbol_square",
+                 handler = function(h, ...) chooseFactorComparisonVars(printMat = TRUE))
+  )
   basicplot.list <- list(e1 = gaction("All Plots", tooltip = NULL, icon = NULL,
                                       handler = function(h, ...) getBasicPlots(1:4)),
                          e2 = gaction("Residuals vs Fitted", tooltip = NULL, icon = NULL,
@@ -1130,12 +1133,12 @@ modelFitting = function(e) {
                                                 handler = function(h, ...) getBasicPlots(6)),
                                    f3 = gaction("Histogram Array", tooltip = NULL, icon = NULL,
                                                 handler = function(h, ...) getHistArray()),
-                                   f4 = gaction("Q-Q Plot Array", tooltip = NULL, icon = NULL,
+                                   f4 = gaction("Q-Q Plot Inference", tooltip = NULL, icon = NULL,
                                                 handler = function(h, ...) getQQPlotArray())
   )
   tblist[8] <- gseparator(parent = modellingWin, horizontal = FALSE)
   tblist$`History` <- list(g1 = gaction("Show code history", 
-                                       handler = function(h, ...) showCodeHistory()))
+                                        handler = function(h, ...) showCodeHistory()))
   
   mb <- gmenu(tblist) 
   
@@ -1145,7 +1148,7 @@ modelFitting = function(e) {
   
   outputLabel = glabel("OUTPUT", expand = TRUE)
   font(outputLabel) <- list(weight = "bold", family = "normal")
-  outputTxt = gtext("", font.attr = c(family = "monospace"))
+  outputTxt = gtext("", font.attr=list(family="monospace"))
   add(mainGp, outputTxt, expand = TRUE)
   
   statusbar = gstatusbar("You can try drag-drop the variable from 'Variables' panel to 'Response(Y)' panel, also Hold 'Ctrl' or 'Shift' to do multiple selection.",cont=mainGp)
@@ -1172,7 +1175,7 @@ modelFitting = function(e) {
           svalue(statusbar) <- result
         #gmessage(title = "ERROR", message = "No output produced.\nCheck current model for errors", icon = "error", container = TRUE, parent = modellingWin)
         else {
-          svalue(statusbar) <- "fitting model successed!"
+          svalue(statusbar) <- "Model fitting successful!"
           insert(outputTxt, paste("> iNZightSummary(", svalue(modelChooser),  ")", sep = ""))
           insert(outputTxt, result)
           insert(outputTxt, "----------------------------------------------------------------------------------")
@@ -1615,7 +1618,7 @@ modelFitting = function(e) {
       }
       code.history <<- paste(code.history, collapse = "\n")
       hist.text <- gtext(code.history, container = hist.group, expand = TRUE,
-                         wrap = FALSE, font.attr = c(family = "monospace"))
+                         wrap = FALSE, font.attr=list(family="monospace"))
     }
     
     makeQualifiedLM <- function(lmtext) {
@@ -1626,5 +1629,4 @@ modelFitting = function(e) {
     }
   }
 }
-
 
