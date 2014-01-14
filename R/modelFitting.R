@@ -38,11 +38,13 @@ fit.model <-
         ## Simple linear regression model:
         #args <- paste(Formula, xargs)
         args <- paste(Formula, dat, xargs, sep = ', ')
+        args <- substring(args, 1, nchar(a)-1)
         call <- paste('lm(', args, ')', sep = '')
       } else {
         ## general linear model:
         #args <- paste(Formula, ",", fam, xargs)
         args <- paste(Formula, dat, fam, xargs, sep = ', ')
+        args <- substring(args, 1, nchar(a)-1)
         call <- paste('glm(', args, ')', sep = '')
       }
     } else if (design == 'survey') {
@@ -59,6 +61,7 @@ fit.model <-
       # set up the svyglm function call
       args <- paste(Formula, fam, "design = svy.design",
                     xargs, sep = ', ')
+      args <- substring(args, 1, nchar(a)-1)
       call <- paste('svyglm(', args, ')', sep = '')
     } else if (design == 'experiment') {
       ## experimental design:
@@ -389,7 +392,7 @@ modelFitting = function(e) {
   main.layout[2, 5, expand=T] <- m.f.list 
   
   d.s.label <- glabel("Data \nStructure")
-  d.s.list <- gcombobox(c("Standard", "Complex Survey", "Designed Expt"),
+  d.s.list <- gcombobox(c("Standard", "Complex Survey"),
                         handler = function(h, ...) {
                           if (svalue(h$obj) == "Standard") {
                             svalue(statusbar) <- "Use modeling framework to select lm/glm"
@@ -1092,10 +1095,10 @@ modelFitting = function(e) {
   tblist$Summary <- list(a1 = gaction(label = "iNZightSummary(current.model)", tooltip = "try1", 
                                      icon = "symbol_diamond", handler = function(h, ...) getModelSummary()))
   tblist[2] <- gseparator(parent = modellingWin, horizontal = FALSE)
-  tblist$`Factors Level` = list(c1 = gaction("Factor Means", tooltip = NULL, icon = NULL,
-                                             handler = function(h, ...) print("factorMeans(model_1)")),
-                                c2 = gaction("Adjusted Means", tooltip = NULL, icon = NULL,
-                                             handler = function(h, ...) print("adjustedMeans(model_1)")),
+  tblist$`Factors Level` = list(#c1 = gaction("Factor Means", tooltip = NULL, icon = NULL,
+                                #             handler = function(h, ...) print("factorMeans(model_1)")),
+                                #c2 = gaction("Adjusted Means", tooltip = NULL, icon = NULL,
+                                #             handler = function(h, ...) print("adjustedMeans(model_1)")),
                                 c3 = gaction("Comparison Plot", tooltip = NULL, icon = "symbol_diamond",
                                              handler = function(h, ...) chooseFactorComparisonVars(printMat = FALSE)),
                                 c4 = gaction("Comparison Matrix", tooltip = NULL, icon = "symbol_square",
