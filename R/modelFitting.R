@@ -128,7 +128,7 @@ modelFitting = function(e) {
   }
   
   modellingWinOpened <- TRUE
-  modellingWin <- gwindow("Model Fitting2(test)", height = 800, 
+  modellingWin <- gwindow("Model Fitting", height = 800, 
                           width = 815)
   tag(modellingWin, "dataSet") <- tag(e$obj, "dataSet")
   
@@ -151,7 +151,7 @@ modelFitting = function(e) {
   mainGp <- gvbox(container = modellingWin,use.scrollwindow = TRUE)
   
   
-  title <- glabel("Model Response using variables of interest and Confounders",cont=mainGp)
+  title <- glabel("Model Response using Variable of Interest and Confounders",cont=mainGp)
   font(title) <- list(weight = "bold",size=15)
   
   
@@ -160,7 +160,7 @@ modelFitting = function(e) {
   paned <- gpanedgroup(cont = mainGp)
   lgroup <- ggroup(cont=paned,horizontal=FALSE,expand=TRUE)
   original.label <- NULL
-  response.varlist.panel <- gframe("Variables Name list",cont=lgroup)
+  response.varlist.panel <- gframe("Variables",cont=lgroup)
   # new gtable is coming from here
   ## find icons by class
   myClass <- function(df) {
@@ -183,7 +183,7 @@ modelFitting = function(e) {
   
   m <- names(mydata)
   type <- sapply(mydata, class)
-  response.type.df = data.frame(varableNames=m, Type=type)
+  response.type.df = data.frame(Name=m, Type=type)
   response.type.df[,1] <- as.character(response.type.df[,1])
   response.type.df <- myClass(response.type.df)
   response.varlist <- gtable(response.type.df, icon.FUN=icon.FUN, 
@@ -270,10 +270,10 @@ modelFitting = function(e) {
       svalue(m.f.list) <- "Least Squares"
     
     if (length(test.factorset[[svalue(moving.y)]]) > 2 & classset[svalue(moving.y)] != "numeric" )
-      svalue(m.f.list) <- "Poisson Regs"
+      svalue(m.f.list) <- "Poisson regreesion (count data)"
     
     if (length(test.factorset[[svalue(moving.y)]]) == 2)
-      svalue(m.f.list) <- "Logistics Regs"
+      svalue(m.f.list) <- "Logistics regression (binary response)"
   })
   main.layout[1, 3] <- moving.y
   
@@ -402,7 +402,7 @@ modelFitting = function(e) {
                             add(nonstandard.layout, aov.frame)
                           }
                           if (svalue(h$obj) == "Complex Survey"){
-                            svalue(statusbar) <- "survey design is now only support strat and 1-level cluster."
+                            svalue(statusbar) <- "survey structure currently only supports strata and 1-level cluster designs."
                             delete(nonstandard.layout, aov.frame)
                             add(nonstandard.layout, svy.frame)  
                           }
@@ -420,7 +420,7 @@ modelFitting = function(e) {
   quasi.edit <- gcombobox(c(FALSE, TRUE))
   offset.label <- glabel("offset")
   offset.edit <- gedit(initial.msg = "accept expression here only")
-  extraargs.frame <- gframe("Extra arguments provides")
+  extraargs.frame <- gframe("Extra arguments: ")
   extraargs.layout <- glayout(cont = extraargs.frame)
   extraargs.layout[1, 1] <- quasi.label
   extraargs.layout[1, 2] <- quasi.edit
@@ -1130,7 +1130,7 @@ modelFitting = function(e) {
                                                 handler = function(h, ...) getBasicPlots(6)),
                                    f3 = gaction("Histogram Array", tooltip = NULL, icon = NULL,
                                                 handler = function(h, ...) getHistArray()),
-                                   f4 = gaction("Q-Q Plot Array", tooltip = NULL, icon = NULL,
+                                   f4 = gaction("Q-Q Plot Inference", tooltip = NULL, icon = NULL,
                                                 handler = function(h, ...) getQQPlotArray())
   )
   tblist[8] <- gseparator(parent = modellingWin, horizontal = FALSE)
@@ -1172,7 +1172,7 @@ modelFitting = function(e) {
           svalue(statusbar) <- result
         #gmessage(title = "ERROR", message = "No output produced.\nCheck current model for errors", icon = "error", container = TRUE, parent = modellingWin)
         else {
-          svalue(statusbar) <- "fitting model successed!"
+          svalue(statusbar) <- "Model fitting successful!"
           insert(outputTxt, paste("> iNZightSummary(", svalue(modelChooser),  ")", sep = ""))
           insert(outputTxt, result)
           insert(outputTxt, "----------------------------------------------------------------------------------")
