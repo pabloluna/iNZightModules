@@ -36,15 +36,16 @@ fit.model <-
       ## simple IID data:
       if (family == 'gaussian') {
         ## Simple linear regression model:
-        #args <- paste(Formula, xargs)
-        args <- paste(Formula, dat, xargs, sep = ', ')
-        args <- substring(args, 1, nchar(args)-1)
+        args <- paste(Formula, dat, sep = ', ')
+        if (xargs != "")
+          args <- paste(args, xargs, sep = ', ')
         call <- paste('lm(', args, ')', sep = '')
       } else {
         ## general linear model:
         #args <- paste(Formula, ",", fam, xargs)
-        args <- paste(Formula, dat, fam, xargs, sep = ', ')
-        args <- substring(args, 1, nchar(args)-1)
+        args <- paste(Formula, dat, fam, sep = ', ')
+        if (xargs != "")
+          args <- paste(args, xargs, sep = ', ')
         call <- paste('glm(', args, ')', sep = '')
       }
     } else if (design == 'survey') {
@@ -59,9 +60,9 @@ fit.model <-
       #svy.design <<- eval(parse(text = svy.des))
       
       # set up the svyglm function call
-      args <- paste(Formula, fam, "design = svy.design",
-                    xargs, sep = ', ')
-      args <- substring(args, 1, nchar(args)-1)
+      args <- paste(Formula, fam, "design = svy.design", sep = ', ')
+      if (xargs != "")
+        args <- paste(args, xargs, sep = ', ')
       call <- paste('svyglm(', args, ')', sep = '')
     } else if (design == 'experiment') {
       ## experimental design:
@@ -154,7 +155,7 @@ modelFitting = function(e) {
   mainGp <- gvbox(container = modellingWin,use.scrollwindow = TRUE)
   
   
-  title <- glabel("Model Response using Variable of Interest and Confounders",cont=mainGp)
+  title <- glabel("Model Response (Y) using Variables of Interest and Confounders",cont=mainGp)
   font(title) <- list(weight = "bold",size=15)
   
   
@@ -237,7 +238,7 @@ modelFitting = function(e) {
   
   
   main.layout <- glayout(cont = paned)
-  y.label <- glabel("Response(Y)")
+  y.label <- glabel("Response (Y)")
   main.layout[1, 2] <- y.label
   moving.y <- gcombobox(c("", names(tag(modellingWin, "dataSet"))))
   size(moving.y) <- c(100,20)
@@ -276,7 +277,7 @@ modelFitting = function(e) {
       svalue(m.f.list) <- "Poisson regreesion (count data)"
     
     if (length(test.factorset[[svalue(moving.y)]]) == 2)
-      svalue(m.f.list) <- "Logistics regression (binary response)"
+      svalue(m.f.list) <- "Logistic Regression (Y binary)"
   })
   main.layout[1, 3] <- moving.y
   
@@ -294,7 +295,7 @@ modelFitting = function(e) {
   
   t.y.label <- glabel("Transform \n   y")
   t.y.layout <- glayout()
-  transform.drop.list <- gcombobox(c("NULL", "log", "root"))
+  transform.drop.list <- gcombobox(c("NULL", "log", "sqrt", "^ argument"))
   size(transform.drop.list) <- c(80, 20)
   addHandlerChanged(transform.drop.list, handler = function(h, ...) {
     
@@ -350,8 +351,8 @@ modelFitting = function(e) {
         return(svalue(statusbar) <- paste("we are not provide extra argument of log so far; 
                                           This may leads to a wrong fitting model."))
       
-      if (svalue(h$obj)=="" & svalue(transform.drop.list) == "root")
-        return(svalue(statusbar) <- paste("please provide the argument to control how degree root you want"))
+      if (svalue(h$obj)=="" & svalue(transform.drop.list) == "^ argument")
+        return(svalue(statusbar) <- paste("please provide the argument to control how degree you want"))
       
       if (svalue(transform.drop.list) != "NULL")
         svalue(statusbar) <- paste("choosing", 
@@ -368,16 +369,16 @@ modelFitting = function(e) {
   # but we add sth if "lm" to "glm" or delete sth if "glm" to "lm"
   place <- "0"
   m.f.label <- glabel("Modeling \nframework")
-  m.f.list <-gcombobox(c("Least Squares","Logistics regression (binary response)","Poisson regression (binary response)"),
+  m.f.list <-gcombobox(c("Least Squares","Logistic Regression (Y binary)","Poisson Regression (Y counts)"),
                        handler = function(h, ...) {
                          
                          
-                         if ((svalue(h$obj) == "Logistics regression (binary response)" | svalue(h$obj) == "Poisson regression (binary response)") & place == "0"){ 
+                         if ((svalue(h$obj) == "Logistic Regression (Y binary)" | svalue(h$obj) == "Poisson Regression (Y counts)") & place == "0"){ 
                            enabled(tblist$normchecks) <- FALSE
                            add(nonstandard.layout, extraargs.frame)
                            place <<- "1"
                          }
-                         if ((svalue(h$obj) == "Logistics regression (binary response)" | svalue(h$obj) == "Poisson regression (binary response)") & place == "1"){
+                         if ((svalue(h$obj) == "Logistic Regression (Y binary)" | svalue(h$obj) == "Poisson Regression (Y counts)") & place == "1"){
                            return()
                          }
                          if ( svalue(h$obj) == "Least Squares" ){
@@ -396,6 +397,10 @@ modelFitting = function(e) {
                         handler = function(h, ...) {
                           if (svalue(h$obj) == "Standard") {
                             svalue(statusbar) <- "Use modeling framework to select lm/glm"
+                            svalue(svycluster.edit, index = TRUE) <- 1
+                            svalue(svystrata.edit, index = TRUE) <- 1
+                            svalue(svycluster.edit, index = TRUE) <- 1
+                            svalue(svyfpc.edit, index = TRUE) <- 1
                             delete(nonstandard.layout, svy.frame) 
                             delete(nonstandard.layout, aov.frame)
                           }
@@ -433,39 +438,39 @@ modelFitting = function(e) {
   
   ## complex survey 
   svydes.vec <- character(4)
-  svyid.label <- glabel("id = ~")
-  svyid.edit <- gcombobox(c("", "1", names(tag(modellingWin, "dataSet"))), 
-                          handler = function(h, ...){
-                            if (svalue(svyid.edit)=="") 
-                              svydes.vec[1] <<- ""
-                            else
-                              svydes.vec[1] <<- paste0(svalue(svyid.label),svalue(svyid.edit))
-                          })
-  svystrata.label <-  glabel("strata = ~")
+  svycluster.label <- glabel("Cluster")
+  svycluster.edit <- gcombobox(c("", "1", names(tag(modellingWin, "dataSet"))), 
+                               handler = function(h, ...){
+                                 if (svalue(svycluster.edit)=="") 
+                                   svydes.vec[1] <<- ""
+                                 else
+                                   svydes.vec[1] <<- paste0("id = ~",svalue(svycluster.edit))
+                               })
+  svystrata.label <-  glabel("Strata")
   svystrata.edit <- gcombobox(c("", names(tag(modellingWin, "dataSet"))), 
                               handler = function(h, ...){
                                 if (svalue(svystrata.edit)=="") 
                                   svydes.vec[2] <<- ""
                                 else
-                                  svydes.vec[2] <<- paste0(svalue(svystrata.label),svalue(svystrata.edit))
+                                  svydes.vec[2] <<- paste0("strata = ~",svalue(svystrata.edit))
                               })
   
-  svyweights.label <- glabel("weights = ~")
+  svyweights.label <- glabel("Weights")
   svyweights.edit <- gcombobox(c("", names(tag(modellingWin, "dataSet"))), 
                                handler = function(h, ...){
                                  if (svalue(svyweights.edit)=="") 
                                    svydes.vec[3] <<- ""
                                  else
-                                   svydes.vec[3] <<- paste0(svalue(svyweights.label),svalue(svyweights.edit))
+                                   svydes.vec[3] <<- paste0("weights = ~",svalue(svyweights.edit))
                                })
   
-  svyfpc.label <- glabel("fpc = ~") 
+  svyfpc.label <- glabel("fpc") 
   svyfpc.edit <- gcombobox(c("", names(tag(modellingWin, "dataSet"))), 
                            handler = function(h, ...){
                              if (svalue(svyfpc.edit)=="") 
                                svydes.vec[4] <<- ""
                              else
-                               svydes.vec[4] <<- paste0(svalue(svyfpc.label),svalue(svyfpc.edit))
+                               svydes.vec[4] <<- paste0("fpc = ~",svalue(svyfpc.edit))
                            })
   svyextra.button <- gbutton("More", handler = function(h,...) {
     svalue(statusbar) <- "For more complex survey design and provide this functionality in the future."
@@ -474,8 +479,8 @@ modelFitting = function(e) {
   svy.design <- NULL
   svy.frame <- gframe("survey design")
   svy.layout <- glayout(cont = svy.frame)
-  svy.layout[1, 1, anchor =c(0, 0)] <- svyid.label
-  svy.layout[1, 2, anchor =c(0, 0)] <- svyid.edit
+  svy.layout[1, 1, anchor =c(0, 0)] <- svycluster.label
+  svy.layout[1, 2, anchor =c(0, 0)] <- svycluster.edit
   svy.layout[2, 1, anchor =c(0, 0)] <- svystrata.label
   svy.layout[2, 2, anchor =c(0, 0)] <- svystrata.edit
   svy.layout[3, 1, anchor =c(0, 0)] <- svyweights.label
@@ -525,7 +530,7 @@ modelFitting = function(e) {
     svalue(x.var.choice) <- "Confounders"  
   })
   
-  aswitch.button <- gaction(label = "<=>", tooltip = "switch variables name across panel", 
+  aswitch.button <- gaction(label = "<=>", tooltip = "switch panel", 
                             handler = function(h, ...) {
                               select <- Entry()
                               if (any(as.character(select) == "")) return()
@@ -554,7 +559,7 @@ modelFitting = function(e) {
   Confounders.list <- character(0)
   total.vars.list <- character(0)
   
-  aAdd.button <- gaction("add",tooltip = "Add Varables from Variable Name list",
+  aAdd.button <- gaction("Add",tooltip = "Add Variables from Variable Name list",
                          handler = function(h,...) {
                            addVarstoPanel()
                          })
@@ -637,7 +642,7 @@ modelFitting = function(e) {
   
   ## Macro button list
   aInteract.button = gaction(label = "Interact",
-                             tooltip = "Multiple Selection of the variables in the left variable name list panel")
+                             tooltip = "Interact set of variables selected from variable name list")
   Interact.button <- gbutton(action = aInteract.button)
   Interact.button.list <- {
     list(one = gaction("Full Factorial", 
@@ -652,7 +657,7 @@ modelFitting = function(e) {
                          addVarstoPanel(Interact.buttonO, interact = TRUE)
                        }),
          
-         two = gaction("Factorial to Degree", 
+         two = gaction("All interactions <= Degree (below)", 
                        handler = function(h, ...) {
                          if (length(svalue(response.varlist))<2) 
                            return(svalue(statusbar) <- "Select at least two variables using 'Ctrl' or 'Shift'")
@@ -672,7 +677,7 @@ modelFitting = function(e) {
   ## Macro button list end
   
   degree.layout <- glayout()
-  degree.layout[1, 1, anchor = c(0, 0)] <- glabel("degree")
+  degree.layout[1, 1, anchor = c(0, 0)] <- glabel("Degree")
   degreeI <- gedit(2, width = 2)
   degree.layout[1, 2, anchor = c(0, 0)] <- degreeI
   
@@ -721,8 +726,8 @@ modelFitting = function(e) {
                          
                        }),
          
-         three = gaction("power of degree",
-                         tooltip = "power of the variables given the degree option",
+         three = gaction("^ Degree (above)",
+                         tooltip = "raise to power of Degree (above)",
                          handler = function(h, ...) {
                            entry <- Entry()
                            if (any(is.null(entry)))
@@ -732,7 +737,7 @@ modelFitting = function(e) {
                            #remove.action()
                          }),
          
-         four = gaction("Polynomial to Degree", 
+         four = gaction("Polynomial of Degree", 
                         handler=function(h, ...) {
                           entry <- Entry()
                           if (any(is.null(entry)))
@@ -760,7 +765,7 @@ modelFitting = function(e) {
          #                  addVarstoPanel(Transform.buttonI) 
          #                  
          #                }),
-         six = gaction("relevel", 
+         six = gaction("reset baseline", 
                        handler = function(h, ...){
                          # This one have to be single choice
                          entry <- Entry()
@@ -771,7 +776,7 @@ modelFitting = function(e) {
                          selected.level <- NULL
                          #if(!(entry %in% names(test.factorset))) 
                          #   return(svalue(statusbar)<- paste(entry, "is not factor and no level can be reorder."))
-                         relevel.window <- gwindow("relevel", width=300, height=20, visible=TRUE)
+                         relevel.window <- gwindow("relevel", width=300, height=20, visible=TRUE, parent = modellingWin)
                          relevel.window.group <- ggroup(cont = relevel.window)
                          relevel.window.label1 <- glabel(paste("relevel(", entry, ","), 
                                                          cont=relevel.window.group,
@@ -784,8 +789,8 @@ modelFitting = function(e) {
                          submit.button <- gbutton("sumbit", cont = relevel.window.group, 
                                                   handler = function(h, ...) {
                                                     Transform.buttonI <- paste0("relevel(", entry ,", ref=","'",svalue(relevel.window.droplist),"'",")")
-                                                    addVarstoPanel(Transform.buttonI) 
                                                     remove.action() 
+                                                    addVarstoPanel(Transform.buttonI) 
                                                     dispose(relevel.window)
                                                   })
                        })
@@ -816,7 +821,7 @@ modelFitting = function(e) {
     } 
   }
   
-  aRemove.button <- gaction("Remove", tooltip = "Remove varibles from two right panel(multiple select allowed)",
+  aRemove.button <- gaction("Remove", tooltip = "Remove variables from two right panels (multiple selection allowed)",
                             handler = function(h, ...){
                               remove.action()
                             })
@@ -864,10 +869,10 @@ modelFitting = function(e) {
       y <- svalue(moving.y)
     if (svalue(transform.drop.list) == "log")
       y <- paste0("log(", svalue(moving.y), ")")
-    if (svalue(transform.drop.list) == "root" & svalue(argument.type)!="")
-      y <- paste0("root(", svalue(moving.y), ",", svalue(argument.type), ")")
-    if (svalue(transform.drop.list) == "root" & svalue(argument.type)=="")
-      return(svalue(statusbar) <- paste("provide nth root before fitting the model"))
+    if (svalue(transform.drop.list) == "^ argument" & svalue(argument.type)!="")
+      y <- paste0("I(", svalue(moving.y), "^", svalue(argument.type), ")")
+    if (svalue(transform.drop.list) == "^ argument" & svalue(argument.type)=="")
+      return(svalue(statusbar) <- paste("provide arguement before fitting the model"))
     #if (svalue(transform.drop.list) == "as.numeric")
     #  y <- paste0("as.numeric(", svalue(moving.y), ")")
     
@@ -876,14 +881,14 @@ modelFitting = function(e) {
     target.family <- svalue(m.f.list) 
     if (target.family == "Least Squares") 
       target.family = "gaussian"
-    if (target.family == "Logistics regression (binary response)" & !svalue(quasi.edit)) 
+    if (target.family == "Logistic Regression (Y binary)" & !svalue(quasi.edit)) 
       target.family = "\"binomial\""
-    if (target.family == "Logistics regression (binary response)" & svalue(quasi.edit)) 
+    if (target.family == "Logistic Regression (Y binary)" & svalue(quasi.edit)) 
       target.family = "\"quasibinomial\""
     
-    if (target.family == "Poisson regression (binary response)" & !svalue(quasi.edit)) 
+    if (target.family == "Poisson Regression (Y counts)" & !svalue(quasi.edit)) 
       target.family = "\"poisson\""
-    if (target.family == "Poisson regression (binary response)" & svalue(quasi.edit))
+    if (target.family == "Poisson Regression (Y counts)" & svalue(quasi.edit))
       target.family = "\"quasipoisson\""
     
     target.design <- svalue(d.s.list) 
@@ -1007,7 +1012,8 @@ modelFitting = function(e) {
   })
   
   rename.model.button <- gbutton("Rename model",handler = function(h,...){
-    rename.window = gwindow("Rename Current Model", width=500, height=30)
+    rename.window = gwindow("Rename Current Model", , parent = modellingWin, 
+                            width=500, height=30)
     
     rename.group = ggroup(cont = rename.window)
     oldmodel.label = glabel(svalue(modelChooser), cont = rename.group)
@@ -1015,14 +1021,15 @@ modelFitting = function(e) {
     newmodel.label <- gedit(text = "", initial.msg = "type the new name you want and press submit",
                             cont = rename.group)
     size(newmodel.label) <- c(300,30)
-    anewmode.button <- gaction(label = "sumbit", tooltip = "Not accept name start by Number; Not accept '(','[','{','SPACE';
+    anewmode.button <- gaction(label = "rename", tooltip = "Not accept name start by Number; Not accept '(','[','{','SPACE';
                                Or, you can use `your named model`.",handler = function(h, ...) {
                                  if (svalue(newmodel.label)=="")
                                    return()
                                  new.label <- svalue(newmodel.label)
                                  code.history <<- c(code.history, paste0(svalue(newmodel.label), "<-", svalue(modelChooser)))
                                  names(listOfModels)[currentModelIndex] <<- svalue(newmodel.label)
-                                 modelChooser[currentModelIndex] <<- svalue(newmodel.label)
+                                 ## notice bug!
+                                 modelChooser[][currentModelIndex] <<- svalue(newmodel.label)
                                  svalue(modelChooser, index = TRUE) <- currentModelIndex
                                  #print("new")
                                  #print(currentModelIndex)
@@ -1033,7 +1040,7 @@ modelFitting = function(e) {
                                  #temp.storage.name <<- svalue(newmodel.label)
                                  dispose(rename.window)
   })
-    newmode.button <- gbutton("submit", action = anewmode.button,
+    newmode.button <- gbutton(action = anewmode.button,
                               cont = rename.group)
     
     
@@ -1095,7 +1102,7 @@ modelFitting = function(e) {
   tblist$Summary <- list(a1 = gaction(label = "iNZightSummary(current.model)", tooltip = "try1", 
                                       icon = "symbol_diamond", handler = function(h, ...) getModelSummary()))
   tblist[2] <- gseparator(parent = modellingWin, horizontal = FALSE)
-  tblist$`Factors Level` = list(#c1 = gaction("Factor Means", tooltip = NULL, icon = NULL,
+  tblist$`Category Comparison` = list(#c1 = gaction("Factor Means", tooltip = NULL, icon = NULL,
     #             handler = function(h, ...) print("factorMeans(model_1)")),
     #c2 = gaction("Adjusted Means", tooltip = NULL, icon = NULL,
     #             handler = function(h, ...) print("adjustedMeans(model_1)")),
@@ -1176,8 +1183,9 @@ modelFitting = function(e) {
         #gmessage(title = "ERROR", message = "No output produced.\nCheck current model for errors", icon = "error", container = TRUE, parent = modellingWin)
         else {
           svalue(statusbar) <- "Model fitting successful!"
-          insert(outputTxt, paste("> iNZightSummary(", svalue(modelChooser),  ")", sep = ""))
-          insert(outputTxt, result)
+          insert(outputTxt, paste("> iNZightSummary(", svalue(modelChooser),  ")", sep = ""), 
+                 font.attr=list(family="monospace"))
+          insert(outputTxt, result, font.attr=list(family="monospace"))
           insert(outputTxt, "----------------------------------------------------------------------------------")
           code.history <<- c(code.history, paste("iNZightSummary(", svalue(modelChooser), ")", sep = ""))
         }
@@ -1289,7 +1297,7 @@ modelFitting = function(e) {
           xVartypes = attr(result$terms, "dataClasses")[-1]
           xVarnames = xVarterms[ ! grepl(":", xVarterms) & ! xVartypes %in% c("factor", "ordered")]  ## problem
           ### poly is not suppoort for xVarnames now......also the smooth....
-          pr.window = gwindow("Select Variable(s) to Plot")
+          pr.window = gwindow("Select Variable(s) to Plot", , parent = modellingWin)
           pr.group <- ggroup(horizontal = FALSE, container = pr.window)
           var.table <- gtable(xVarnames, container = pr.group, expand = TRUE, multiple = TRUE)
           plotEachVar <- function(h, ...) {
@@ -1456,7 +1464,7 @@ modelFitting = function(e) {
             xVarnames <- "Only allow numeric interactions and single factors"
           
           winTitle <- if (printMat) "Print" else "Plot"
-          fc.window <- gwindow(paste("Select Variable to", winTitle))
+          fc.window <- gwindow(paste("Select Variable to", winTitle), , parent = modellingWin)
           fc.group <- ggroup(horizontal = FALSE, container = fc.window)
           var.table <- gtable(xVarnames, container = fc.group, expand = TRUE, multiple = FALSE)
           
@@ -1475,8 +1483,10 @@ modelFitting = function(e) {
             if (xvar == "Only allow numeric interactions and single factors") return()
             if (! length(xvar))
               return()
-            insert(outputTxt, paste("> multicomp(moecalc(", svalue(modelChooser), ", \"", xvar, "\"))", sep = ""))
-            insert(outputTxt, capture.output(multicomp(moecalc(result, xvar))))
+            insert(outputTxt, paste("> multicomp(moecalc(", svalue(modelChooser), ", \"", xvar, "\"))", sep = ""),
+                   , font.attr=list(family="monospace"))
+            insert(outputTxt, capture.output(multicomp(moecalc(result, xvar))),
+                   , font.attr=list(family="monospace"))
             insert(outputTxt, "----------------------------------------------------------------------------------")
             code.history <<- c(code.history, paste("multicomp(moecalc(", svalue(modelChooser), ", \"", xvar, "\"))", sep = ""))
           }
@@ -1606,7 +1616,7 @@ modelFitting = function(e) {
     # without initial, every time click code history, header.text will type again.
     initial <- 0
     showCodeHistory <- function() {
-      hist.win <- gwindow("Code History", width = 700, height = 700)
+      hist.win <- gwindow("Code History", width = 450, height = 300, parent = modellingWin)
       hist.group <- ggroup(use.scrollwindow = TRUE, container = hist.win)
       header.text <- c("# To make this code work outside of iNZight, read in your data like so:",
                        paste("# ", dataset.name, " = read.table(file.choose(), header = TRUE)", sep = ""),
