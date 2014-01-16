@@ -374,7 +374,8 @@ modelFitting = function(e) {
                          
                          
                          if ((svalue(h$obj) == "Logistic Regression (Y binary)" | svalue(h$obj) == "Poisson Regression (Y counts)") & place == "0"){ 
-                           enabled(tblist$normchecks) <- FALSE
+                           enabled(tblist$`Normality Checks`$f3) <- FALSE
+                           enabled(tblist$`Normality Checks`$f4) <- FALSE
                            add(nonstandard.layout, extraargs.frame)
                            place <<- "1"
                          }
@@ -383,7 +384,8 @@ modelFitting = function(e) {
                          }
                          if ( svalue(h$obj) == "Least Squares" ){
                            place <<- "0"
-                           enabled(tblist$normchecks) <- TRUE
+                           enabled(tblist$`Normality Checks`$f3) <- TRUE
+                           enabled(tblist$`Normality Checks`$f4) <- TRUE
                            delete(nonstandard.layout, extraargs.frame)
                            
                          }
@@ -1029,7 +1031,7 @@ modelFitting = function(e) {
                                  code.history <<- c(code.history, paste0(svalue(newmodel.label), "<-", svalue(modelChooser)))
                                  names(listOfModels)[currentModelIndex] <<- svalue(newmodel.label)
                                  ## notice bug!
-                                 modelChooser[][currentModelIndex] <<- svalue(newmodel.label)
+                                 modelChooser[currentModelIndex] <<- svalue(newmodel.label)
                                  svalue(modelChooser, index = TRUE) <- currentModelIndex
                                  #print("new")
                                  #print(currentModelIndex)
