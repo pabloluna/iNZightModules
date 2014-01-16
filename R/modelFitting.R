@@ -127,7 +127,7 @@ modelFitting = function(e) {
   
   varnames <- names(tag(e$obj, "dataSet"))
   if (length(varnames) == 1 && varnames == "empty") {
-    gmessage("A dataset is required to use the model fitting module", title = "No data", icon = "error")
+    gmessage(msg = "A dataset is required to use the model fitting module", title = "No data", icon = "error")
     return()
   }
   
@@ -859,6 +859,7 @@ modelFitting = function(e) {
       
       dataset.name.f <- paste0("temp", temp.data.frame.id)
       temp.data.frame.id <<- temp.data.frame.id + 1 
+      tag(modellingWin, "name") <<- dataset.name.f
       
       assign(dataset.name.f, eval(parse(text = transform.command)), .GlobalEnv)
       code.history <<- c(code.history, paste(dataset.name.f, " <- ", transform.command))
@@ -903,6 +904,10 @@ modelFitting = function(e) {
     
     
     svy.design <<- fit.design(svydes.vec, dataset.name.f)
+    if (target.design == "survey") {
+      code.history <<- c(code.history,
+                         paste("svy.design", paste0(deparse(svy.design$call),collapse = " "), sep = " = "))
+    }
     current.fit <- fit.model(y, x, data = dataset.name.f, 
                              family = target.family, 
                              design = target.design)
@@ -1128,7 +1133,8 @@ modelFitting = function(e) {
   )
   tblist[4] <- gseparator(parent = modellingWin, horizontal = FALSE)
   tblist$`Graphical Diagnostics` = list(d1 = gaction("Scatter Plot Matrix", tooltip = NULL, icon = "symbol_diamond",
-                                                     handler = function(h, ...) getScatterplotMatrix() ),
+                                                     handler = function(h, ...) {
+                                                       getScatterplotMatrix() }),
                                         "Basic Plots (4 types)" = basicplot.list,
                                         d3 = gaction("Partial Residual Plot", tooltip = NULL, icon = NULL,
                                                      handler = function(h, ...) choosePartialResid()),
@@ -1194,7 +1200,7 @@ modelFitting = function(e) {
         options(show.error.messages = TRUE)
         
       } else {
-        gmessage(title = "ERROR", message = "Select a model first then try again", icon = "error", container = TRUE, parent = modellingWin)
+        gmessage(title = "ERROR", msg = "Select a model first then try again", icon = "error", container = TRUE, parent = modellingWin)
       }
     }
     
@@ -1205,7 +1211,7 @@ modelFitting = function(e) {
         options(show.error.messages = FALSE)
         result = try(eval(parse(text = paste("with(tag(modellingWin, \"dataSet\"), anova(", listOfModels[modelIndex], "))", collapse = ""))))
         if (inherits(result, "try-error"))
-          gmessage(title = "ERROR", message = "No output produced.\nCheck current model for errors", icon = "error", container = TRUE, parent = modellingWin)
+          gmessage(title = "ERROR", msg = "No output produced.\nCheck current model for errors", icon = "error", container = TRUE, parent = modellingWin)
         else {
           insert(outputTxt, paste("> anova(", svalue(modelChooser),  ")", sep = ""))
           insert(outputTxt, capture.output(eval(result)))
@@ -1214,7 +1220,7 @@ modelFitting = function(e) {
         }
         options(show.error.messages = TRUE)
       } else {
-        gmessage(title = "ERROR", message = "Select a model first then try again", icon = "error", container = TRUE, parent = modellingWin)
+        gmessage(title = "ERROR", msg = "Select a model first then try again", icon = "error", container = TRUE, parent = modellingWin)
       }
     }
     
@@ -1224,7 +1230,7 @@ modelFitting = function(e) {
         options(show.error.messages = FALSE)
         result = try(eval(parse(text = paste("with(tag(modellingWin, \"dataSet\"), vif(", listOfModels[modelIndex], "))", collapse = ""))))
         if (inherits(result, "try-error"))
-          gmessage(title = "ERROR", message = "No output produced.\nCheck current model for errors", icon = "error", container = TRUE, parent = modellingWin)
+          gmessage(title = "ERROR", msg = "No output produced.\nCheck current model for errors", icon = "error", container = TRUE, parent = modellingWin)
         else {
           insert(outputTxt, paste("> vif(", svalue(modelChooser),  ")", sep = ""))
           insert(outputTxt, capture.output(eval(result)))
@@ -1233,7 +1239,7 @@ modelFitting = function(e) {
         }
         options(show.error.messages = TRUE)
       } else {
-        gmessage(title = "ERROR", message = "Select a model first then try again", icon = "error", container = TRUE, parent = modellingWin)
+        gmessage(title = "ERROR", msg = "Select a model first then try again", icon = "error", container = TRUE, parent = modellingWin)
       }
     }
     
@@ -1244,7 +1250,7 @@ modelFitting = function(e) {
         result = try(eval(parse(text = listOfModels[modelIndex] )))
         #result = try(eval(parse(text = paste("with(tag(modellingWin, \"dataSet\"),", listOfModels[modelIndex], ")", collapse = ""))))
         if (inherits(result, "try-error"))
-          gmessage(title = "ERROR", message = "No output produced.\nCheck current.model for errors", icon = "error", container = TRUE, parent = modellingWin)
+          gmessage(title = "ERROR", msg = "No output produced.\nCheck current.model for errors", icon = "error", container = TRUE, parent = modellingWin)
         else {
           dev.new()
           plot.new()
@@ -1260,28 +1266,41 @@ modelFitting = function(e) {
         }
         options(show.error.messages = TRUE)
       } else {
-        gmessage(title = "ERROR", message = "Select a model first then try again", icon = "error", container = TRUE, parent = modellingWin)
+        gmessage(title = "ERROR", msg = "Select a model first then try again", icon = "error", container = TRUE, parent = modellingWin)
       }
     }
     
     getScatterplotMatrix = function() {
       modelIndex = svalue(modelChooser, index = TRUE)
       if (modelIndex != 1) {
-        names_list = names(tag(modellingWin, "dataSet"))
-        logical_list = logical(length(names_list))
-        
-        for(i in 1:length(names_list))
-          logical_list[i] = grepl(names_list[i], listOfModels[modelIndex])
-        
-        dev.new()
-        gpairs(tag(modellingWin, "dataSet")[,logical_list])
-        
-        obj.lm <- with(tag(modellingWin, "dataSet"), eval(parse(text = listOfModels[modelIndex])))
-        vars.in.use <- names(attr(terms(obj.lm), "dataClasses"))
-        vars.in.use <- paste("\"", paste(vars.in.use, collapse = "\", \""), "\"", sep = "")
-        code.history <<- c(code.history, paste("gpairs(", dataset.name.f, "[, c(", vars.in.use, ")])", sep = ""))
-      } else {
-        gmessage(title = "ERROR", message = "Select a model first then try again", icon = "error", container = TRUE, parent = modellingWin)
+        options(show.error.messages = FALSE)
+        result = try(eval(parse(text = listOfModels[modelIndex] )))
+        #result = try(eval(parse(text = paste("with(tag(modellingWin, \"dataSet\"), ", listOfModels[modelIndex], ")", collapse = ""))))
+        if (class(result)[1] == "try-error")
+          gmessage(title = "ERROR", msg = "No output produced.\nCheck current model for errors", icon = "error", container = TRUE, parent = modellingWin)
+        else {
+          gpairs(result$model)
+          code.history <<- c(code.history, paste0("gpairs(", paste0(svalue(modelChooser),"$model"),")"))
+          #modelIndex = svalue(modelChooser, index = TRUE)
+          #if (modelIndex != 1) {
+          
+          #  names_list = names(tag(modellingWin, "dataSet"))
+          #  logical_list = logical(length(names_list))
+          
+          #  for(i in 1:length(names_list))
+          #    logical_list[i] = grepl(names_list[i], listOfModels[modelIndex])
+          
+          
+          #  dev.new()
+          #  gpairs(tag(modellingWin, "dataSet")[,logical_list])
+          
+          #  obj.lm <- with(tag(modellingWin, "dataSet"), eval(parse(text = listOfModels[modelIndex])))
+          #  vars.in.use <- names(attr(terms(obj.lm), "dataClasses"))
+          #  vars.in.use <- paste("\"", paste(vars.in.use, collapse = "\", \""), "\"", sep = "")
+          #code.history <<- c(code.history, paste("gpairs(", dataset.name.f, "[, c(", vars.in.use, ")])", sep = ""))
+        } }
+      else {
+        gmessage(title = "ERROR", msg = "Select a model first then try again", icon = "error", container = TRUE, parent = modellingWin)
       }
     }
     
@@ -1292,7 +1311,7 @@ modelFitting = function(e) {
         result = try(eval(parse(text = listOfModels[modelIndex] )))
         #result = try(eval(parse(text = paste("with(tag(modellingWin, \"dataSet\"), ", listOfModels[modelIndex], ")", collapse = ""))))
         if (class(result)[1] == "try-error")
-          gmessage(title = "ERROR", message = "No output produced.\nCheck current model for errors", icon = "error", container = TRUE, parent = modellingWin)
+          gmessage(title = "ERROR", msg = "No output produced.\nCheck current model for errors", icon = "error", container = TRUE, parent = modellingWin)
         else {
           assign(x = "svy.design", value = svy.design, envir = .GlobalEnv)
           xVarterms = attr(result$terms, "term.labels")
@@ -1320,7 +1339,7 @@ modelFitting = function(e) {
         }
         options(show.error.messages = TRUE)
       } else {
-        gmessage(title = "ERROR", message = "Select a model first then try again", icon = "error", container = TRUE, parent = modellingWin)
+        gmessage(title = "ERROR", msg = "Select a model first then try again", icon = "error", container = TRUE, parent = modellingWin)
       }
     }
     
@@ -1342,7 +1361,7 @@ modelFitting = function(e) {
         result = try(eval(parse(text = listOfModels[modelIndex] )))
         #result = try(eval(parse(text = paste("with(tag(modellingWin, \"dataSet\"), ", listOfModels[modelIndex], ")", collapse = ""))))
         if (class(result)[1] == "try-error")
-          gmessage(title = "ERROR", message = "No output produced.\nCheck current model for errors", icon = "error", container = TRUE, parent = modellingWin)
+          gmessage(title = "ERROR", msg = "No output produced.\nCheck current model for errors", icon = "error", container = TRUE, parent = modellingWin)
         else {
           dev.new()
           allPartialResPlots(result)
@@ -1350,7 +1369,7 @@ modelFitting = function(e) {
         }
         options(show.error.messages = TRUE)
       } else {
-        gmessage(title = "ERROR", message = "Select a model first then try again", icon = "error", container = TRUE, parent = modellingWin)
+        gmessage(title = "ERROR", msg = "Select a model first then try again", icon = "error", container = TRUE, parent = modellingWin)
       }
     }
     
@@ -1361,7 +1380,7 @@ modelFitting = function(e) {
         result = try(eval(parse(text = listOfModels[modelIndex] )))
         #result = try(eval(parse(text = paste("with(tag(modellingWin, \"dataSet\"), ", listOfModels[modelIndex], ")", collapse = ""))))
         if (class(result)[1] == "try-error")
-          gmessage(title = "ERROR", message = "No output produced.\nCheck current model for errors", icon = "error", container = TRUE, parent = modellingWin)
+          gmessage(title = "ERROR", msg = "No output produced.\nCheck current model for errors", icon = "error", container = TRUE, parent = modellingWin)
         else {
           dev.new()
           histogramArray(result)
@@ -1369,7 +1388,7 @@ modelFitting = function(e) {
         }
         options(show.error.messages = TRUE)
       } else {
-        gmessage(title = "ERROR", message = "Select a model first then try again", icon = "error", container = TRUE, parent = modellingWin)
+        gmessage(title = "ERROR", msg = "Select a model first then try again", icon = "error", container = TRUE, parent = modellingWin)
       }
     }
     
@@ -1380,7 +1399,7 @@ modelFitting = function(e) {
         result = try(eval(parse(text = listOfModels[modelIndex] )))
         #result = try(eval(parse(text = paste("with(tag(modellingWin, \"dataSet\"), ", listOfModels[modelIndex], ")", collapse = ""))))
         if (class(result)[1] == "try-error")
-          gmessage(title = "ERROR", message = "No output produced.\nCheck current model for errors", icon = "error", container = TRUE, parent = modellingWin)
+          gmessage(title = "ERROR", msg = "No output produced.\nCheck current model for errors", icon = "error", container = TRUE, parent = modellingWin)
         else {
           dev.new()
           #qqplotArray(result)
@@ -1389,7 +1408,7 @@ modelFitting = function(e) {
         }
         options(show.error.messages = TRUE)
       } else {
-        gmessage(title = "ERROR", message = "Select a model first then try again", icon = "error", container = TRUE, parent = modellingWin)
+        gmessage(title = "ERROR", msg = "Select a model first then try again", icon = "error", container = TRUE, parent = modellingWin)
       }
     }
     
@@ -1400,7 +1419,7 @@ modelFitting = function(e) {
         result = try(eval(parse(text = listOfModels[modelIndex] )))
         #result = try(eval(parse(text = paste("with(tag(modellingWin, \"dataSet\"), ", listOfModels[modelIndex], ")", collapse = ""))))
         if (class(result)[1] == "try-error")
-          gmessage(title = "ERROR", message = "No output produced.\nCheck current model for errors", icon = "error", container = TRUE, parent = modellingWin)
+          gmessage(title = "ERROR", msg = "No output produced.\nCheck current model for errors", icon = "error", container = TRUE, parent = modellingWin)
         else {
           xVarterms = attr(result$terms, "term.labels")
           xVartypes = attr(result$terms, "dataClasses")[-1]
@@ -1500,7 +1519,7 @@ modelFitting = function(e) {
         }
         options(show.error.messages = TRUE)
       } else {
-        gmessage(title = "ERROR", message = "Select a model first then try again", icon = "error", container = TRUE, parent = modellingWin)
+        gmessage(title = "ERROR", msg = "Select a model first then try again", icon = "error", container = TRUE, parent = modellingWin)
       }
     }
     
@@ -1563,7 +1582,7 @@ modelFitting = function(e) {
         add(dropObsMainGp, dropObsTertiaryGp)
         add(dropObsMainGp, dropObsFourthGp)
       } else {
-        gmessage(title = "ERROR", message = "Select a model first then try again", icon = "error", container = TRUE, parent = modellingWin)
+        gmessage(title = "ERROR", msg = "Select a model first then try again", icon = "error", container = TRUE, parent = modellingWin)
       }
     }
     
@@ -1609,7 +1628,7 @@ modelFitting = function(e) {
       inputExpression = svalue(predictionsText)
       result = try(eval(parse(text = inputExpression)))
       if (inherits(result, "try-error"))
-        gmessage(title = "ERROR", message = "No output produced.\nCheck submitted expression for errors", icon = "error", container = TRUE, parent = predictionsWin)
+        gmessage(title = "ERROR", msg = "No output produced.\nCheck submitted expression for errors", icon = "error", container = TRUE, parent = predictionsWin)
       else
         insert(outputText, capture.output(eval(result)))
     }
