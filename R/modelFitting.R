@@ -1279,7 +1279,7 @@ modelFitting = function(e) {
         if (class(result)[1] == "try-error")
           gmessage(title = "ERROR", msg = "No output produced.\nCheck current model for errors", icon = "error", container = TRUE, parent = modellingWin)
         else {
-          new.dev()
+          dev.new()
           gpairs(result$model)
           code.history <<- c(code.history, paste0("gpairs(", paste0(svalue(modelChooser),"$model"),")"))
           #modelIndex = svalue(modelChooser, index = TRUE)
