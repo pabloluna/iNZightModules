@@ -23,7 +23,7 @@ scatterPlotMatrix = function(e,...){
     chosenVars = svalue(listOfVars)
     chosenVarIndices = which(names(tag(e$obj,"dataSet")) %in% chosenVars)
     
-    #dev.new()
+    dev.new()
     gpairs(tag(e$obj, "dataSet")[,chosenVarIndices])
     #dispose(scatterPlotWin)
   })
