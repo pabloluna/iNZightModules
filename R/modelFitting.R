@@ -739,16 +739,16 @@ modelFitting = function(e) {
                            #remove.action()
                          }),
          
-         four = gaction("Polynomial of Degree", 
-                        handler=function(h, ...) {
-                          entry <- Entry()
-                          if (any(is.null(entry)))
-                            return()
-                          Transform.buttonI <- paste0("poly(", entry, ",", svalue(degreeI), ")")
-                          remove.action()
-                          addVarstoPanel(Transform.buttonI) 
-                          
-                        }),
+         #four = gaction("Polynomial of Degree", 
+        #                handler=function(h, ...) {
+        #                  entry <- Entry()
+        #                  if (any(is.null(entry)))
+        #                    return()
+        #                  Transform.buttonI <- paste0("poly(", entry, ",", svalue(degreeI), ")")
+        #                  remove.action()
+        #                  addVarstoPanel(Transform.buttonI) 
+        #                  
+        #                }),
          
          #five = gaction("smooth",
          #                handler = function(h, ...) {
