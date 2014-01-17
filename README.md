@@ -1,5 +1,5 @@
-iNZightChild
-============
+iNZightModules
+==============
 
 Each sub module is now placed here... they are just GUI interfaces.
 
