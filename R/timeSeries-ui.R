@@ -109,7 +109,7 @@ timeSeries <- function(e) {
                          enabled(single.recompose) <- allow.recompose
                          enabled(single.recomp.result) <- allow.recompose
                          if (valid.ts && valid.var) {
-                           assign("stopAnimation", FALSE, envir = tsenv)
+                           #assign("stopAnimation", FALSE, envir = tsenv)
                            dev.off()
                            tsPlot(var.df = var.df, start = ts.info$start,
                                   frequency = ts.info$frequency, animate = FALSE, env = tsenv) 
@@ -166,7 +166,6 @@ timeSeries <- function(e) {
                                                                 enabled(single.forecast) <- length(ts.info$start) > 1
                                                               }
                                                             } else if (svalue(single.tsplot.animated) == "Skip Animation") {
-                                                              print("into 1")
                                                               ts.info <- tsStructure
                                                               assign("stopAnimation", TRUE, envir = tsenv)
                                                               enabled(single.label) <- TRUE
@@ -193,7 +192,7 @@ timeSeries <- function(e) {
                                                    enabled(single.recompose) <- allow.recompose
                                                    enabled(single.recomp.result) <- allow.recompose
                                                    if (valid.ts && valid.var) {
-                                                     assign("stopAnimation", FALSE, envir = tsenv)
+                                                     assign("stopAnimation", TRUE, envir = tsenv)
                                                      tsPlot(var.df = var.df, start = ts.info$start,
                                                               frequency = ts.info$frequency, animate = FALSE, env = tsenv)
                                                    }
@@ -268,7 +267,6 @@ timeSeries <- function(e) {
                                      enabled(recompose.start.anime) <- allow.recompose
                                      enabled(single.recomp.result) <- allow.recompose
                                      if (valid.ts && valid.var) {
-                                       assign("stopAnimation", FALSE, envir = tsenv)
                                        tsRecompResult(var.df = var.df, start = ts.info$start,
                                                       frequency = ts.info$frequency, env = tsenv)
                                      }
