@@ -573,7 +573,7 @@ hwPredictionWindow <- function(var.df, start, frequency) {
   vars <- list(data = var.df, start = start, freq = frequency)
   pw <- gwindow(title = "Prediction Output", width = 600, height = 400)
   pg <- ggroup(horizontal = FALSE, use.scrollwindow = TRUE, container = pw)
-  predtext <- gtext("", font.attr = c(family = "monospace"), wrap = FALSE,
+  predtext <- gtext("", font.attr = list(family = "monospace"), wrap = FALSE,
                     expand = TRUE, container = pg)
   
   # Get output from HW fitting
