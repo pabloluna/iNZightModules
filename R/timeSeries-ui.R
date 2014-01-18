@@ -1,6 +1,6 @@
 # This is a module used for graphical time series analysis.
 timeSeries <- function(e) {
-
+  
   
   
   tsStructure <- list(start = NA, frequency = NA)
@@ -102,22 +102,11 @@ timeSeries <- function(e) {
                           enabled(single.forecast) <- length(ts.info$start) > 1
                           enabled(single.recompose) <- FALSE
                           enabled(single.recomp.result) <- FALSE
-                          ts.info <- tsStructure
-                          valid.ts <- valid.ts.info(ts.info)
-                          # We always know that there will be at least one selected value
-                          # otherwise we would not be able to run this handler
-                          var.df <- tag(e$obj, "dataSet")[, svalue(tsVarselect), drop = FALSE]
-                          valid.var <- valid.vars(var.df)
                           allow.recompose <- FALSE
                           enabled(single.recompose) <- allow.recompose
                           enabled(single.recomp.result) <- allow.recompose
-                          if (valid.ts && valid.var) {
-                            #dev.off()
-                            tsPlot(var.df = var.df, start = ts.info$start,
-                                   frequency = ts.info$frequency, animate = FALSE, env = tsenv) 
-                            enabled(start.anime) <- TRUE
-                            enabled(skip.anime) <- FALSE
-                          }
+                          enabled(start.anime) <- TRUE
+                          enabled(skip.anime) <- FALSE
                         })
   main.layout[3, 1:2] <- glabel("Select variable(s)\n(Use Ctrl for multiple selection)")
   main.layout[4, 1:2] <- (tsVarselect <- gtable(names(tag(e$obj, "dataSet")), multiple = TRUE))
@@ -262,17 +251,10 @@ timeSeries <- function(e) {
                                     #enabled(single.recompose) <- FALSE
                                     enabled(single.recomp.result) <- FALSE
                                     assign("stopAnimation", TRUE, envir = tsenv)
-                                    valid.ts <- valid.ts.info(ts.info)
-                                    var.df <- tag(e$obj, "dataSet")[, svalue(tsVarselect), drop = FALSE]
-                                    valid.var <- valid.vars(var.df)
                                     allow.recompose <- FALSE
                                     #enabled(single.recompose) <- allow.recompose
                                     enabled(recompose.start.anime) <- allow.recompose
                                     enabled(single.recomp.result) <- allow.recompose
-                                    if (valid.ts && valid.var) {
-                                      tsRecompResult(var.df = var.df, start = ts.info$start,
-                                                     frequency = ts.info$frequency, env = tsenv)
-                                    }
                                     enabled(recompose.start.anime) <- TRUE
                                     enabled(recompose.skip.anime) <- FALSE
                                     enabled(single.recomp.result) <- TRUE
