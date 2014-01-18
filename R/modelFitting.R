@@ -561,7 +561,7 @@ modelFitting = function(e) {
   Confounders.list <- character(0)
   total.vars.list <- character(0)
   
-  aAdd.button <- gaction("Add",tooltip = "Add Variables from Variable Name list",
+  aAdd.button <- gaction("Add", tooltip = "Add Variables from Variable Name list", icon = "gtk-go-forward", 
                          handler = function(h,...) {
                            addVarstoPanel()
                          })
@@ -643,7 +643,7 @@ modelFitting = function(e) {
   
   
   ## Macro button list
-  aInteract.button = gaction(label = "Interact",
+  aInteract.button = gaction(label = "Interact", icon = "gtk-jump-to",
                              tooltip = "Interact set of variables selected from variable name list")
   Interact.button <- gbutton(action = aInteract.button)
   Interact.button.list <- {
@@ -684,7 +684,7 @@ modelFitting = function(e) {
   degree.layout[1, 2, anchor = c(0, 0)] <- degreeI
   
   ## transform button
-  Transform.button <- gbutton(action = gaction("Transform", 
+  Transform.button <- gbutton(action = gaction("Transform", icon = "gtk-refresh",
                                                tooltip = "only accept the variable in two right panels"))
   
   ## the strategy of Entry and addVarspanel is different
@@ -739,16 +739,16 @@ modelFitting = function(e) {
                            #remove.action()
                          }),
          
-         #four = gaction("Polynomial of Degree", 
-        #                handler=function(h, ...) {
-        #                  entry <- Entry()
-        #                  if (any(is.null(entry)))
-        #                    return()
-        #                  Transform.buttonI <- paste0("poly(", entry, ",", svalue(degreeI), ")")
-        #                  remove.action()
-        #                  addVarstoPanel(Transform.buttonI) 
-        #                  
-        #                }),
+         four = gaction("Polynomial of Degree", 
+                        handler=function(h, ...) {
+                          entry <- Entry()
+                          if (any(is.null(entry)))
+                            return()
+                          Transform.buttonI <- paste0("poly(", entry, ",", svalue(degreeI), ")")
+                          remove.action()
+                          addVarstoPanel(Transform.buttonI) 
+                          
+                        }),
          
          #five = gaction("smooth",
          #                handler = function(h, ...) {
@@ -824,6 +824,7 @@ modelFitting = function(e) {
   }
   
   aRemove.button <- gaction("Remove", tooltip = "Remove variables from two right panels (multiple selection allowed)",
+                            icon = "gtk-undo",
                             handler = function(h, ...){
                               remove.action()
                             })
@@ -1661,4 +1662,3 @@ modelFitting = function(e) {
     }
   }
 }
-

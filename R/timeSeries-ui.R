@@ -53,61 +53,63 @@ timeSeries <- function(e) {
   # allow for a somewhat "global" variable
   tsenv <- new.env()
   assign("stopAnimation", FALSE, envir = tsenv)
-  start.anime <- gbutton("Time Series Plot - Animate",
+  astart.anime <- gaction("Time Series Plot - Animate", icon = "gtk-media-play",
+                          handler = function(h, ...) {
+                            assign("stopAnimation", FALSE, envir = tsenv)
+                            ts.info <- tsStructure
+                            valid.ts <- valid.ts.info(ts.info)
+                            # We always know that there will be at least one selected value
+                            # otherwise we would not be able to run this handler
+                            var.df <- tag(e$obj, "dataSet")[, svalue(tsVarselect), drop = FALSE]
+                            valid.var <- valid.vars(var.df)
+                            allow.recompose <- FALSE
+                            enabled(single.recompose) <- allow.recompose
+                            enabled(single.recomp.result) <- allow.recompose
+                            main.layout[6, 1] <- skip.anime
+                            if (valid.ts && valid.var) {
+                              enabled(single.label) <- FALSE
+                              #enabled(single.tsplot.animated) <- TRUE  
+                              enabled(start.anime) <- FALSE
+                              enabled(skip.anime) <- TRUE
+                              enabled(single.tsplot) <- FALSE
+                              enabled(single.decompose) <- FALSE
+                              enabled(single.seasonal) <- FALSE
+                              enabled(single.forecast) <- FALSE
+                              enabled(recompose.start.anime) <- FALSE
+                              enabled(single.recomp.result) <- FALSE
+                              tsPlot(var.df = var.df, start = ts.info$start,
+                                     frequency = ts.info$frequency, animate = TRUE, env = tsenv)
+                              enabled(single.label) <- TRUE
+                              enabled(single.tsplot) <- TRUE
+                              enabled(start.anime) <- TRUE
+                              enabled(skip.anime) <- FALSE
+                              enabled(single.decompose) <- TRUE
+                              enabled(recompose.start.anime) <- FALSE
+                              enabled(single.recomp.result) <- FALSE
+                              enabled(single.seasonal) <- length(ts.info$start) > 1
+                              enabled(single.forecast) <- length(ts.info$start) > 1
+                              
+                            }
+                          })
+  start.anime <- gbutton(action = astart.anime)
+  askip.anime <- gaction("Skip to End", icon = "gtk-media-next", 
                          handler = function(h, ...) {
-                           assign("stopAnimation", FALSE, envir = tsenv)
                            ts.info <- tsStructure
-                           valid.ts <- valid.ts.info(ts.info)
-                           # We always know that there will be at least one selected value
-                           # otherwise we would not be able to run this handler
-                           var.df <- tag(e$obj, "dataSet")[, svalue(tsVarselect), drop = FALSE]
-                           valid.var <- valid.vars(var.df)
+                           assign("stopAnimation", TRUE, envir = tsenv)
+                           enabled(single.label) <- TRUE
+                           enabled(single.tsplot) <- TRUE
+                           enabled(single.decompose) <- TRUE
+                           enabled(single.seasonal) <- length(ts.info$start) > 1
+                           enabled(single.forecast) <- length(ts.info$start) > 1
+                           enabled(single.recompose) <- FALSE
+                           enabled(single.recomp.result) <- FALSE
                            allow.recompose <- FALSE
                            enabled(single.recompose) <- allow.recompose
                            enabled(single.recomp.result) <- allow.recompose
-                           main.layout[6, 1] <- skip.anime
-                           if (valid.ts && valid.var) {
-                             enabled(single.label) <- FALSE
-                             #enabled(single.tsplot.animated) <- TRUE  
-                             enabled(start.anime) <- FALSE
-                             enabled(skip.anime) <- TRUE
-                             enabled(single.tsplot) <- FALSE
-                             enabled(single.decompose) <- FALSE
-                             enabled(single.seasonal) <- FALSE
-                             enabled(single.forecast) <- FALSE
-                             enabled(recompose.start.anime) <- FALSE
-                             enabled(single.recomp.result) <- FALSE
-                             tsPlot(var.df = var.df, start = ts.info$start,
-                                    frequency = ts.info$frequency, animate = TRUE, env = tsenv)
-                             enabled(single.label) <- TRUE
-                             enabled(single.tsplot) <- TRUE
-                             enabled(start.anime) <- TRUE
-                             enabled(skip.anime) <- FALSE
-                             enabled(single.decompose) <- TRUE
-                             enabled(recompose.start.anime) <- FALSE
-                             enabled(single.recomp.result) <- FALSE
-                             enabled(single.seasonal) <- length(ts.info$start) > 1
-                             enabled(single.forecast) <- length(ts.info$start) > 1
-                             
-                           }
+                           enabled(start.anime) <- TRUE
+                           enabled(skip.anime) <- FALSE
                          })
-  skip.anime <- gbutton("Skip to End",
-                        handler = function(h, ...) {
-                          ts.info <- tsStructure
-                          assign("stopAnimation", TRUE, envir = tsenv)
-                          enabled(single.label) <- TRUE
-                          enabled(single.tsplot) <- TRUE
-                          enabled(single.decompose) <- TRUE
-                          enabled(single.seasonal) <- length(ts.info$start) > 1
-                          enabled(single.forecast) <- length(ts.info$start) > 1
-                          enabled(single.recompose) <- FALSE
-                          enabled(single.recomp.result) <- FALSE
-                          allow.recompose <- FALSE
-                          enabled(single.recompose) <- allow.recompose
-                          enabled(single.recomp.result) <- allow.recompose
-                          enabled(start.anime) <- TRUE
-                          enabled(skip.anime) <- FALSE
-                        })
+  skip.anime<- gbutton(action = askip.anime)
   main.layout[3, 1:2] <- glabel("Select variable(s)\n(Use Ctrl for multiple selection)")
   main.layout[4, 1:2] <- (tsVarselect <- gtable(names(tag(e$obj, "dataSet")), multiple = TRUE))
   size(tsVarselect) <- c(300, 200)
@@ -203,62 +205,65 @@ timeSeries <- function(e) {
                                                           tsDecompose(var.df = var.df, start = ts.info$start, frequency = ts.info$frequency)
                                                         }
                                                       }))
-  recompose.start.anime <- gbutton("Recompose - Animate", 
+  
+  arecompose.start.anime <- gaction("Recompose - Animate", icon = "gtk-media-play",
+                                    handler = function(h, ...) {
+                                      ts.info <- tsStructure
+                                      valid.ts <- valid.ts.info(ts.info)
+                                      var.df <- tag(e$obj, "dataSet")[, svalue(tsVarselect), drop = FALSE]
+                                      valid.var <- valid.vars(var.df)
+                                      allow.recompose <- FALSE
+                                      #enabled(single.recompose) <- allow.recompose
+                                      enabled(recompose.start.anime) <- allow.recompose
+                                      enabled(single.recomp.result) <- allow.recompose
+                                      enabled(recompose.skip.anime) <- TRUE
+                                      if (valid.ts && valid.var) {
+                                        enabled(single.label) <- FALSE
+                                        #enabled(single.tsplot.animated) <- FALSE
+                                        enabled(start.anime) <- FALSE
+                                        enabled(single.tsplot) <- FALSE
+                                        enabled(single.decompose) <- FALSE
+                                        enabled(single.seasonal) <- FALSE
+                                        enabled(single.forecast) <- FALSE
+                                        enabled(recompose.start.anime) <- FALSE
+                                        assign("stopAnimation", FALSE, envir = tsenv)
+                                        tsRecompose(var.df = var.df, start = ts.info$start,
+                                                    frequency = ts.info$frequency, env = tsenv)
+                                        enabled(single.label) <- TRUE
+                                        #enabled(single.tsplot.animated) <- TRUE
+                                        enabled(start.anime) <- TRUE
+                                        enabled(single.tsplot) <- TRUE
+                                        enabled(single.decompose) <- TRUE
+                                        enabled(recompose.start.anime) <- TRUE
+                                        enabled(recompose.skip.anime) <- FALSE
+                                        enabled(single.seasonal) <- length(ts.info$start) > 1
+                                        enabled(single.forecast) <- length(ts.info$start) > 1
+                                      }
+                                    })
+  recompose.start.anime <- gbutton(action = arecompose.start.anime)
+  arecompose.skip.anime <- gaction("Skip to End", icon = "gtk-media-next",
                                    handler = function(h, ...) {
                                      ts.info <- tsStructure
-                                     valid.ts <- valid.ts.info(ts.info)
-                                     var.df <- tag(e$obj, "dataSet")[, svalue(tsVarselect), drop = FALSE]
-                                     valid.var <- valid.vars(var.df)
+                                     enabled(single.label) <- TRUE
+                                     #enabled(single.tsplot.animated) <- TRUE
+                                     enabled(start.anime) <- TRUE
+                                     enabled(single.tsplot) <- TRUE
+                                     enabled(single.decompose) <- TRUE
+                                     enabled(single.seasonal) <- length(ts.info$start) > 1
+                                     enabled(single.forecast) <- length(ts.info$start) > 1
+                                     enabled(recompose.start.anime) <- FALSE 
+                                     #enabled(single.recompose) <- FALSE
+                                     enabled(single.recomp.result) <- FALSE
+                                     assign("stopAnimation", TRUE, envir = tsenv)
                                      allow.recompose <- FALSE
                                      #enabled(single.recompose) <- allow.recompose
                                      enabled(recompose.start.anime) <- allow.recompose
                                      enabled(single.recomp.result) <- allow.recompose
-                                     enabled(recompose.skip.anime) <- TRUE
-                                     if (valid.ts && valid.var) {
-                                       enabled(single.label) <- FALSE
-                                       #enabled(single.tsplot.animated) <- FALSE
-                                       enabled(start.anime) <- FALSE
-                                       enabled(single.tsplot) <- FALSE
-                                       enabled(single.decompose) <- FALSE
-                                       enabled(single.seasonal) <- FALSE
-                                       enabled(single.forecast) <- FALSE
-                                       enabled(recompose.start.anime) <- FALSE
-                                       assign("stopAnimation", FALSE, envir = tsenv)
-                                       tsRecompose(var.df = var.df, start = ts.info$start,
-                                                   frequency = ts.info$frequency, env = tsenv)
-                                       enabled(single.label) <- TRUE
-                                       #enabled(single.tsplot.animated) <- TRUE
-                                       enabled(start.anime) <- TRUE
-                                       enabled(single.tsplot) <- TRUE
-                                       enabled(single.decompose) <- TRUE
-                                       enabled(recompose.start.anime) <- TRUE
-                                       enabled(recompose.skip.anime) <- FALSE
-                                       enabled(single.seasonal) <- length(ts.info$start) > 1
-                                       enabled(single.forecast) <- length(ts.info$start) > 1
-                                     }
+                                     enabled(recompose.start.anime) <- TRUE
+                                     enabled(recompose.skip.anime) <- FALSE
+                                     enabled(single.recomp.result) <- TRUE
                                    })
-  recompose.skip.anime <- gbutton("Skip to End", 
-                                  handler = function(h, ...) {
-                                    ts.info <- tsStructure
-                                    enabled(single.label) <- TRUE
-                                    #enabled(single.tsplot.animated) <- TRUE
-                                    enabled(start.anime) <- TRUE
-                                    enabled(single.tsplot) <- TRUE
-                                    enabled(single.decompose) <- TRUE
-                                    enabled(single.seasonal) <- length(ts.info$start) > 1
-                                    enabled(single.forecast) <- length(ts.info$start) > 1
-                                    enabled(recompose.start.anime) <- FALSE 
-                                    #enabled(single.recompose) <- FALSE
-                                    enabled(single.recomp.result) <- FALSE
-                                    assign("stopAnimation", TRUE, envir = tsenv)
-                                    allow.recompose <- FALSE
-                                    #enabled(single.recompose) <- allow.recompose
-                                    enabled(recompose.start.anime) <- allow.recompose
-                                    enabled(single.recomp.result) <- allow.recompose
-                                    enabled(recompose.start.anime) <- TRUE
-                                    enabled(recompose.skip.anime) <- FALSE
-                                    enabled(single.recomp.result) <- TRUE
-                                  })
+  recompose.skip.anime <- gbutton(action = arecompose.skip.anime)
   small.layout2 <- glayout()
   main.layout[8, 1] <- small.layout2
   small.layout2[1, 1] <- recompose.start.anime
