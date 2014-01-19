@@ -413,7 +413,6 @@ modelFitting = function(e) {
                           }
                           if (svalue(h$obj) == "Complex Survey"){
                             svalue(statusbar) <- "survey structure currently only supports strata and 1-level cluster designs."
-                            delete(nonstandard.layout, aov.frame)
                             add(nonstandard.layout, svy.frame)  
                           }
                         })
@@ -480,16 +479,19 @@ modelFitting = function(e) {
   
   svy.design <- NULL
   svy.frame <- gframe("survey design")
-  svy.layout <- glayout(cont = svy.frame)
+  gsvy.frame <- ggroup(cont = svy.frame)
+  size(gsvy.frame) <- c(150, 150)
+  svy.layout <- glayout(cont = gsvy.frame)
   svy.layout[1, 1, anchor =c(0, 0)] <- svycluster.label
-  svy.layout[1, 2, anchor =c(0, 0)] <- svycluster.edit
+  svy.layout[1, 2, anchor =c(0, 0), expand = TRUE] <- svycluster.edit
+  size(svycluster.edit) <- c(100,20)
   svy.layout[2, 1, anchor =c(0, 0)] <- svystrata.label
-  svy.layout[2, 2, anchor =c(0, 0)] <- svystrata.edit
+  svy.layout[2, 2, anchor =c(0, 0), expand = TRUE] <- svystrata.edit
   svy.layout[3, 1, anchor =c(0, 0)] <- svyweights.label
-  svy.layout[3, 2, anchor =c(0, 0)] <- svyweights.edit
+  svy.layout[3, 2, anchor =c(0, 0), expand = TRUE] <- svyweights.edit
   svy.layout[4, 1, anchor =c(0, 0)] <- svyfpc.label
   svy.layout[4, 2, anchor =c(0, 0)] <- svyfpc.edit
-  svy.layout[5, 2, anchor =c(0, 0)] <- svyextra.button
+  svy.layout[5, 2, anchor =c(0, 0), expand = TRUE] <- svyextra.button
   
   
   ## complex survey end
