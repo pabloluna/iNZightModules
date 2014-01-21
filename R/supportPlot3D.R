@@ -1,3 +1,8 @@
+.onAttach <- function(...) {
+    if (!"package:rgl" %in% search())
+        require(rgl)
+}
+
 scatter3d <- function(x, y, z,
                       xlab=deparse(substitute(x)), ylab=deparse(substitute(y)),
                       axis.scales=TRUE,
@@ -53,16 +58,16 @@ scatter3d <- function(x, y, z,
     #                lab.max.y <- nice(maxy)
     #                lab.min.z <- nice(minz)
     #                lab.max.z <- nice(maxz)
-    
-    
+
+
     lab.min.x <- minx
     lab.max.x <- maxx
     lab.min.y <- miny
     lab.max.y <- maxy
     lab.min.z <- minz
     lab.max.z <- maxz
-    
-    
+
+
     minx <- min(lab.min.x, minx)
     maxx <- max(lab.max.x, maxx)
     miny <- min(lab.min.y, miny)
@@ -320,18 +325,18 @@ identify3d  <-
       #                  lab.max.y <- nice(maxy)
       #                  lab.min.z <- nice(minz)
       #                  lab.max.z <- nice(maxz)
-      
-      
+
+
       lab.min.x <- minx
       lab.max.x <- maxx
       lab.min.y <- miny
       lab.max.y <- maxy
       lab.min.z <- minz
       lab.max.z <- maxz
-      
-      
-      
-      
+
+
+
+
       minx <- min(lab.min.x, minx)
       maxx <- max(lab.max.x, maxx)
       miny <- min(lab.min.y, miny)
