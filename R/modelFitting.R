@@ -557,7 +557,7 @@ modelFitting = function(e) {
                              tooltip = "Interact set of variables selected from variable name list")
   Interact.button <- gbutton(action = aInteract.button)
   Interact.button.list <- {
-    list(one = gaction("Full Factorial", 
+    list(one = gaction("All", 
                        handler = function(h, ...) {
                          if (length(svalue(response.varlist))<2) 
                            return(svalue(statusbar) <- "Select at least two variables using 'Ctrl' or 'Shift'")
@@ -569,7 +569,7 @@ modelFitting = function(e) {
                          addVarstoPanel(Interact.buttonO, interact = TRUE)
                        }),
          
-         two = gaction("All interactions <= Degree (below)", 
+         two = gaction("All Interactions <= Degree (below)", 
                        handler = function(h, ...) {
                          if (length(svalue(response.varlist))<2) 
                            return(svalue(statusbar) <- "Select at least two variables using 'Ctrl' or 'Shift'")
