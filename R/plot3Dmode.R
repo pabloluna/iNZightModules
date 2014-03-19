@@ -139,7 +139,9 @@ plot3D = function(e){
     #if(e$deviceNumber != dev.cur())  e$canIdentify = FALSE
     
     if(e$canIdentify)
-      identify3d(eval(parse(text = paste("tag(e$obj, \"dataSet\")", "$", svalue(covariateDrop1), collapse = ""))), col = "white", eval(parse(text = paste("tag(e$obj, \"dataSet\")", "$", svalue(responseDrop), collapse = ""))), eval(parse(text = paste("tag(e$obj, \"dataSet\")", "$", svalue(covariateDrop2), collapse = ""))))
+      identify3d(eval(parse(text = paste("tag(e$obj, \"dataSet\")", "$", svalue(covariateDrop1), collapse = ""))),
+      eval(parse(text = paste("tag(e$obj, \"dataSet\")", "$", svalue(responseDrop), collapse = ""))), 
+      eval(parse(text = paste("tag(e$obj, \"dataSet\")", "$", svalue(covariateDrop2), collapse = ""))))
     #identify3d(x, y, z, axis.scales=TRUE, groups=NULL, labels=1:length(x),
     #                      col=c("blue", "green", "orange", "magenta", "cyan", "red", "yellow", "gray"),
     #                      offset = ((100/length(x))^(1/3)) * 0.02)
