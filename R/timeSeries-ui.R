@@ -1,9 +1,10 @@
 # This is a module used for graphical time series analysis.
 timeSeries <- function(e) {
+
   
-  
-  
+  tsenv <- new.env()
   tsStructure <- list(start = NA, frequency = NA)
+  tag(e$obj, "tsStructure") = list(start = NA, frequency = NA)
   fully.loaded <- FALSE
   tswin <- gwindow(title = "Time Series", expand = FALSE)
   main.group <- ggroup(horizontal = FALSE, expand = TRUE, container = tswin)
@@ -43,81 +44,132 @@ timeSeries <- function(e) {
   
   main.layout[2, 2, expand = TRUE] <- (createTimeVar <- gbutton("Create",
                                                                 handler = function(h, ...) {
-                                                                  e$createTSInfo()
+                                                                  #createTSInfo()
+                                                                  tsconvwin <- gwindow("Provide Time Series Information")
+                                                                  tsgroup <- ggroup(horizontal = FALSE, container = tsconvwin)
+                                                                  tsvar.layout <- glayout(container = tsgroup)
+                                                                  tsvar.layout[1, 1, expand = FALSE] <- (tsStart1.lab <- glabel("Start Date"))
+                                                                  tsvar.layout[1, 2, expand = TRUE] <- (tsVarStart1 <- gedit(width = 30, height = 20))
+                                                                  tsvar.layout[2, 1, expand = FALSE] <- (tsStart2.lab <- glabel("Season Number"))
+                                                                  tsvar.layout[2, 2, expand = TRUE] <- (tsVarStart2 <- gedit(width = 30, height = 20))
+                                                                  tsvar.layout[3, 1, expand = FALSE] <- (tsFrequency.lab <- glabel("Frequency"))
+                                                                  tsvar.layout[3, 2, expand = TRUE] <- (tsVarFrequency <- gedit(width = 30, height = 20))
+                                                                  saveButton <- gbutton("Provide TS Info", container = tsgroup,
+                                                                                        handler = function(h, ...) {
+                                                                                          valid.params <- logical(3)
+                                                                                          valid.ts.args <- function(arg) {
+                                                                                            suppressWarnings(tmp <- as.integer(arg))
+                                                                                            ! is.na(tmp) && length(tmp) > 0
+                                                                                          }
+                                                                                          # Start Part 1 - starting value of the series (could be years)
+                                                                                          start.part1 <- svalue(tsVarStart1)
+                                                                                          valid.params[1] <- valid.ts.args(start.part1)
+                                                                                          # Start Part 2 - how far through the cycle of the first value we are
+                                                                                          start.part2 <- svalue(tsVarStart2)
+                                                                                          valid.params[2] <- valid.ts.args(start.part2)
+                                                                                          # Frequency - how many values does it take for us to increment "Start Part 1"
+                                                                                          frequency <- svalue(tsVarFrequency)
+                                                                                          valid.params[3] <- valid.ts.args(frequency)
+                                                                                          if (! all(valid.params)) {
+                                                                                            gmessage("One of your time series parameters is not an integer", icon = "error")
+                                                                                            return()
+                                                                                          }
+                                                                                          # Now we know all params are valid, cast to ints
+                                                                                          start.part1 <- as.integer(start.part1)
+                                                                                          start.part2 <- as.integer(start.part2)
+                                                                                          frequency <- as.integer(frequency)
+                                                                                          tsStructure <<- list(start = c(start.part1, start.part2),
+                                                                                                              frequency = frequency)
+                                                                                          # Get rid of the window for now
+                                                                                          dispose(tsconvwin)
+                                                                                        })
                                                                 }))
   
   enabled(createTimeVar) <- FALSE
   allow.recompose <- FALSE
   
+  
   # Need to create an environment, within which we are able to
   # allow for a somewhat "global" variable
-  tsenv <- new.env()
+
   assign("stopAnimation", FALSE, envir = tsenv)
   astart.anime <- gaction("Time Series Plot - Animate", icon = "gtk-media-play",
-                          handler = function(h, ...) {
-                            assign("stopAnimation", FALSE, envir = tsenv)
-                            ts.info <- tsStructure
-                            valid.ts <- valid.ts.info(ts.info)
-                            # We always know that there will be at least one selected value
-                            # otherwise we would not be able to run this handler
-                            var.df <- tag(e$obj, "dataSet")[, svalue(tsVarselect), drop = FALSE]
-                            valid.var <- valid.vars(var.df)
-                            allow.recompose <- FALSE
-                            enabled(single.recompose) <- allow.recompose
-                            enabled(single.recomp.result) <- allow.recompose
-                            main.layout[6, 1] <- skip.anime
-                            if (valid.ts && valid.var) {
-                              enabled(single.label) <- FALSE
-                              #enabled(single.tsplot.animated) <- TRUE  
-                              enabled(start.anime) <- FALSE
-                              enabled(skip.anime) <- TRUE
-                              enabled(single.tsplot) <- FALSE
-                              enabled(single.decompose) <- FALSE
-                              enabled(single.seasonal) <- FALSE
-                              enabled(single.forecast) <- FALSE
-                              enabled(recompose.start.anime) <- FALSE
-                              enabled(single.recomp.result) <- FALSE
-                              tsPlot(var.df = var.df, start = ts.info$start,
-                                     frequency = ts.info$frequency, animate = TRUE, env = tsenv)
-                              enabled(single.label) <- TRUE
-                              enabled(single.tsplot) <- TRUE
-                              enabled(start.anime) <- TRUE
-                              enabled(skip.anime) <- FALSE
-                              enabled(single.decompose) <- TRUE
-                              enabled(recompose.start.anime) <- FALSE
-                              enabled(single.recomp.result) <- FALSE
-                              enabled(single.seasonal) <- length(ts.info$start) > 1
-                              enabled(single.forecast) <- length(ts.info$start) > 1
-                              
-                            }
-                          })
-  start.anime <- gbutton(action = astart.anime)
-  askip.anime <- gaction("Skip to End", icon = "gtk-media-next", 
                          handler = function(h, ...) {
+                           assign("stopAnimation", FALSE, envir = tsenv)
                            ts.info <- tsStructure
-                           assign("stopAnimation", TRUE, envir = tsenv)
-                           enabled(single.label) <- TRUE
-                           enabled(single.tsplot) <- TRUE
-                           enabled(single.decompose) <- TRUE
-                           enabled(single.seasonal) <- length(ts.info$start) > 1
-                           enabled(single.forecast) <- length(ts.info$start) > 1
-                           enabled(single.recompose) <- FALSE
-                           enabled(single.recomp.result) <- FALSE
+                           valid.ts <- valid.ts.info(ts.info)
+                           # We always know that there will be at least one selected value
+                           # otherwise we would not be able to run this handler
+                           var.df <- tag(e$obj, "dataSet")[, svalue(tsVarselect), drop = FALSE]
+                           valid.var <- valid.vars(var.df)
                            allow.recompose <- FALSE
                            enabled(single.recompose) <- allow.recompose
                            enabled(single.recomp.result) <- allow.recompose
-                           enabled(start.anime) <- TRUE
-                           enabled(skip.anime) <- FALSE
+                           if (valid.ts && valid.var) {
+                             enabled(single.label) <- FALSE
+                             #enabled(single.tsplot.animated) <- TRUE  
+                             var.df2 <- iNZightTS(tag(e$obj, "dataSet"), 
+                                                  start = ts.info$start,
+                                                  freq = ts.info$frequency,                                                                           
+                                                  var=svalue(tsVarselect,index= TRUE))
+                             enabled(start.anime) <- FALSE
+                             enabled(skip.anime) <- TRUE
+                             enabled(single.tsplot) <- FALSE
+                             enabled(single.decompose) <- FALSE
+                             enabled(single.seasonal) <- FALSE
+                             enabled(single.forecast) <- FALSE
+                             enabled(recompose.start.anime) <- FALSE
+                             enabled(single.recomp.result) <- FALSE
+                             rawplot(var.df2, animate = TRUE, e= tsenv)
+                             #tsPlot(var.df = var.df, start = ts.info$start,
+                            #        frequency = ts.info$frequency, animate = TRUE, env = tsenv)
+                             enabled(single.label) <- TRUE
+                             enabled(single.tsplot) <- TRUE
+                             enabled(start.anime) <- TRUE
+                             enabled(skip.anime) <- FALSE
+                             enabled(single.decompose) <- TRUE
+                             enabled(recompose.start.anime) <- FALSE
+                             enabled(single.recomp.result) <- FALSE
+                             enabled(single.seasonal) <- length(ts.info$start) > 1
+                             enabled(single.forecast) <- length(ts.info$start) > 1
+                             
+                           }
                          })
+  start.anime <- gbutton(action = astart.anime)
+  askip.anime <- gaction("Skip to End", icon = "gtk-media-next", 
+                        handler = function(h, ...) {
+                          ts.info <- tsStructure
+                          assign("stopAnimation", TRUE, envir = tsenv)
+                          enabled(single.label) <- TRUE
+                          enabled(single.tsplot) <- TRUE
+                          enabled(single.decompose) <- TRUE
+                          enabled(single.seasonal) <- length(ts.info$start) > 1
+                          enabled(single.forecast) <- length(ts.info$start) > 1
+                          enabled(single.recompose) <- FALSE
+                          enabled(single.recomp.result) <- FALSE
+                          allow.recompose <- FALSE
+                          enabled(single.recompose) <- allow.recompose
+                          enabled(single.recomp.result) <- allow.recompose
+                          enabled(start.anime) <- TRUE
+                          enabled(skip.anime) <- FALSE
+                        })
   skip.anime<- gbutton(action = askip.anime)
-  main.layout[3, 1:2] <- glabel("Select variable(s)\n(Use Ctrl for multiple selection)")
-  main.layout[4, 1:2] <- (tsVarselect <- gtable(names(tag(e$obj, "dataSet")), multiple = TRUE))
+  main.layout[3, 1:2, anchor = c(-0.9,-0.5), expand= TRUE] <- glabel("Select variable(s)\n(Use Ctrl for multiple selection)")
+  tsVarselect <- gtable(names(tag(e$obj, "dataSet")), multiple = TRUE)
+  main.layout[4, 1:2] <- tsVarselect
   size(tsVarselect) <- c(300, 200)
-  main.layout[5, 1:2] <- (single.label <- glabel("Single Series"))
+  middle.layout <- glayout()
+  radio.group <- gradio(c("Additive","Multiplicative"), selected=1, horizontal=TRUE, label = "model type")
+  middle.layout[1,1] <- radio.group
+  ylab.input <- gedit()
+  middle.layout[1,2] <- glabel("y label")
+  middle.layout[1,3] <- ylab.input
+  main.layout[5, 1:2] <- middle.layout
+  main.layout[6, 1:2] <- (single.label <- glabel("Single Series"))
   small.layout <- glayout()
   small.layout[1,1] <- start.anime
   small.layout[1,2] <- skip.anime
-  main.layout[6, 1] <- small.layout
+  main.layout[7, 1] <- small.layout
   
   # the old single.ts.plot.animated
   # I personally still want to use one button and flip to change its ability
@@ -126,7 +178,7 @@ timeSeries <- function(e) {
                                      handler = function(h, ...) {
                                        if (svalue(single.tsplot.animated) == "Time Series Plot - Animate") {
                                          assign("stopAnimation", FALSE, envir = tsenv)
-                                         ts.info <<- tsStructure
+                                         ts.info <- tsStructure
                                          valid.ts <- valid.ts.info(ts.info)
                                          # We always know that there will be at least one selected value
                                          # otherwise we would not be able to run this handler
@@ -146,8 +198,7 @@ timeSeries <- function(e) {
                                            enabled(single.recompose) <- FALSE
                                            enabled(single.recomp.result) <- FALSE
                                            tsPlot(var.df = var.df, start = ts.info$start,
-                                                  frequency = ts.info$frequency, animate = TRUE, env = tsenv)
-                                           
+                                                 frequency = ts.info$frequency, animate = TRUE, env = tsenv)
                                            enabled(single.label) <- TRUE
                                            enabled(single.tsplot.animated) <- TRUE
                                            svalue(single.tsplot.animated) <- "Time Series Plot - Animate"
@@ -173,7 +224,7 @@ timeSeries <- function(e) {
                                        }
                                      }))
   
-  main.layout[6, 2] <- (single.tsplot <- gbutton("Time Series Plot",
+  main.layout[7, 2] <- (single.tsplot <- gbutton("Time Series Plot",
                                                  handler = function(h, ...) {
                                                    ts.info <- tsStructure
                                                    valid.ts <- valid.ts.info(ts.info)
@@ -185,12 +236,19 @@ timeSeries <- function(e) {
                                                    enabled(single.recompose) <- allow.recompose
                                                    enabled(single.recomp.result) <- allow.recompose
                                                    if (valid.ts && valid.var) {
+                                                     var.df2 <- iNZightTS(tag(e$obj, "dataSet"), 
+                                                                          start = ts.info$start,
+                                                                          freq = ts.info$frequency,                                                                           
+                                                                          var=svalue(tsVarselect,index= TRUE))
                                                      assign("stopAnimation", FALSE, envir = tsenv)
-                                                     tsPlot(var.df = var.df, start = ts.info$start,
-                                                            frequency = ts.info$frequency, animate = FALSE, env = tsenv)
+                                                     #tsPlot(var.df = var.df, start = ts.info$start,
+                                                    #        frequency = ts.info$frequency, animate = FALSE, env = tsenv)
+                                                    rawplot(var.df2, ylab = svalue(ylab.input),
+                                                            multiplicative = svalue(radio.group) == "Multiplicative",
+                                                            animate=FALSE, e = tsenv)
                                                    }
                                                  }))
-  main.layout[7, 1:2] <- (single.decompose <- gbutton("Decompose",
+  main.layout[8, 1:2] <- (single.decompose <- gbutton("Decompose",
                                                       handler = function(h, ...) {
                                                         ts.info <- tsStructure
                                                         valid.ts <- valid.ts.info(ts.info)
@@ -202,70 +260,83 @@ timeSeries <- function(e) {
                                                           enabled(single.recomp.result) <- allow.recompose
                                                           #svalue(single.recompose) <- "Recompose - Animate"
                                                           enabled(recompose.start.anime) <- TRUE
-                                                          tsDecompose(var.df = var.df, start = ts.info$start, frequency = ts.info$frequency)
+                                                          var.df2 <- iNZightTS(tag(e$obj, "dataSet"), 
+                                                                               start = ts.info$start,
+                                                                               freq = ts.info$frequency,                                                                           
+                                                                               var=svalue(tsVarselect,index= TRUE))
+                                                          #tsDecompose(var.df = var.df, start = ts.info$start, frequency = ts.info$frequency)
+                                                          decompositionplot(var.df2, ylab = svalue(ylab.input), 
+                                                                            multiplicative = svalue(radio.group) == "Multiplicative")
                                                         }
                                                       }))
   
   arecompose.start.anime <- gaction("Recompose - Animate", icon = "gtk-media-play",
-                                    handler = function(h, ...) {
-                                      ts.info <- tsStructure
-                                      valid.ts <- valid.ts.info(ts.info)
-                                      var.df <- tag(e$obj, "dataSet")[, svalue(tsVarselect), drop = FALSE]
-                                      valid.var <- valid.vars(var.df)
-                                      allow.recompose <- FALSE
-                                      #enabled(single.recompose) <- allow.recompose
-                                      enabled(recompose.start.anime) <- allow.recompose
-                                      enabled(single.recomp.result) <- allow.recompose
-                                      enabled(recompose.skip.anime) <- TRUE
-                                      if (valid.ts && valid.var) {
-                                        enabled(single.label) <- FALSE
-                                        #enabled(single.tsplot.animated) <- FALSE
-                                        enabled(start.anime) <- FALSE
-                                        enabled(single.tsplot) <- FALSE
-                                        enabled(single.decompose) <- FALSE
-                                        enabled(single.seasonal) <- FALSE
-                                        enabled(single.forecast) <- FALSE
-                                        enabled(recompose.start.anime) <- FALSE
-                                        assign("stopAnimation", FALSE, envir = tsenv)
-                                        tsRecompose(var.df = var.df, start = ts.info$start,
-                                                    frequency = ts.info$frequency, env = tsenv)
-                                        enabled(single.label) <- TRUE
-                                        #enabled(single.tsplot.animated) <- TRUE
-                                        enabled(start.anime) <- TRUE
-                                        enabled(single.tsplot) <- TRUE
-                                        enabled(single.decompose) <- TRUE
-                                        enabled(recompose.start.anime) <- TRUE
-                                        enabled(recompose.skip.anime) <- FALSE
-                                        enabled(single.seasonal) <- length(ts.info$start) > 1
-                                        enabled(single.forecast) <- length(ts.info$start) > 1
-                                      }
-                                    })
-  recompose.start.anime <- gbutton(action = arecompose.start.anime)
-  arecompose.skip.anime <- gaction("Skip to End", icon = "gtk-media-next",
                                    handler = function(h, ...) {
                                      ts.info <- tsStructure
-                                     enabled(single.label) <- TRUE
-                                     #enabled(single.tsplot.animated) <- TRUE
-                                     enabled(start.anime) <- TRUE
-                                     enabled(single.tsplot) <- TRUE
-                                     enabled(single.decompose) <- TRUE
-                                     enabled(single.seasonal) <- length(ts.info$start) > 1
-                                     enabled(single.forecast) <- length(ts.info$start) > 1
-                                     enabled(recompose.start.anime) <- FALSE 
-                                     #enabled(single.recompose) <- FALSE
-                                     enabled(single.recomp.result) <- FALSE
-                                     assign("stopAnimation", TRUE, envir = tsenv)
+                                     valid.ts <- valid.ts.info(ts.info)
+                                     var.df <- tag(e$obj, "dataSet")[, svalue(tsVarselect), drop = FALSE]
+                                     valid.var <- valid.vars(var.df)               
                                      allow.recompose <- FALSE
                                      #enabled(single.recompose) <- allow.recompose
                                      enabled(recompose.start.anime) <- allow.recompose
                                      enabled(single.recomp.result) <- allow.recompose
-                                     enabled(recompose.start.anime) <- TRUE
-                                     enabled(recompose.skip.anime) <- FALSE
-                                     enabled(single.recomp.result) <- TRUE
+                                     enabled(recompose.skip.anime) <- TRUE
+                                     if (valid.ts && valid.var) {
+                                       enabled(single.label) <- FALSE
+                                       
+                                       #enabled(single.tsplot.animated) <- FALSE
+                                       enabled(start.anime) <- FALSE
+                                       enabled(single.tsplot) <- FALSE
+                                       enabled(single.decompose) <- FALSE
+                                       enabled(single.seasonal) <- FALSE
+                                       enabled(single.forecast) <- FALSE
+                                       enabled(recompose.start.anime) <- FALSE
+                                       assign("stopAnimation", FALSE, envir = tsenv)
+                                       var.df2 <- iNZightTS(tag(e$obj, "dataSet"), 
+                                                            start = ts.info$start,
+                                                            freq = ts.info$frequency,                                                                           
+                                                            var=svalue(tsVarselect,index= TRUE))
+                                       #tsRecompose(var.df = var.df, start = ts.info$start,
+                                      #             frequency = ts.info$frequency, env = tsenv)
+                                      iNZightTS:::recompose(decompositionplot(var.df2, ylab = svalue(ylab.input),
+                                                                              multiplicative = svalue(radio.group) == "Multiplicative"), animate=TRUE,e=tsenv)
+                                       enabled(single.label) <- TRUE
+                                       #enabled(single.tsplot.animated) <- TRUE
+                                       enabled(start.anime) <- TRUE
+                                       enabled(single.tsplot) <- TRUE
+                                       enabled(single.decompose) <- TRUE
+                                       enabled(recompose.start.anime) <- TRUE
+                                       enabled(recompose.skip.anime) <- FALSE
+                                       enabled(single.seasonal) <- length(ts.info$start) > 1
+                                       enabled(single.forecast) <- length(ts.info$start) > 1
+                                     }
                                    })
+  recompose.start.anime <- gbutton(action = arecompose.start.anime)
+  arecompose.skip.anime <- gaction("Skip to End", icon = "gtk-media-next",
+                                  handler = function(h, ...) {
+                                    ts.info <- tsStructure
+                                    enabled(single.label) <- TRUE
+                                    #enabled(single.tsplot.animated) <- TRUE
+                                    enabled(start.anime) <- TRUE
+                                    enabled(single.tsplot) <- TRUE
+                                    enabled(single.decompose) <- TRUE
+                                    enabled(single.seasonal) <- length(ts.info$start) > 1
+                                    enabled(single.forecast) <- length(ts.info$start) > 1
+                                    enabled(recompose.start.anime) <- FALSE 
+                                    #enabled(single.recompose) <- FALSE
+                                    enabled(single.recomp.result) <- FALSE
+                                    assign("stopAnimation", TRUE, envir = tsenv)
+                                    allow.recompose <- FALSE
+                                    #enabled(single.recompose) <- allow.recompose
+                                    enabled(recompose.start.anime) <- allow.recompose
+                                    enabled(single.recomp.result) <- allow.recompose
+                                    enabled(recompose.start.anime) <- TRUE
+                                    enabled(recompose.skip.anime) <- FALSE
+                                    enabled(single.recomp.result) <- TRUE
+                                  })
   recompose.skip.anime <- gbutton(action = arecompose.skip.anime)
   small.layout2 <- glayout()
-  main.layout[8, 1] <- small.layout2
+  main.layout[9, 1] <- small.layout2
   small.layout2[1, 1] <- recompose.start.anime
   small.layout2[1, 2] <- recompose.skip.anime 
   enabled(recompose.start.anime) <- FALSE   # %
@@ -279,6 +350,7 @@ timeSeries <- function(e) {
       ts.info <- tsStructure
       valid.ts <- valid.ts.info(ts.info)
       var.df <- tag(e$obj, "dataSet")[, svalue(tsVarselect), drop = FALSE]
+      var.df2 <- iNZightTS(tag(e$obj, "dataSet"), var = svalue(tsVarselect,index=TRUE))
       valid.var <- valid.vars(var.df)
       allow.recompose <- FALSE
       enabled(single.recompose) <- allow.recompose
@@ -318,7 +390,7 @@ timeSeries <- function(e) {
       assign("stopAnimation", TRUE, envir = tsenv)
     }
   }))
-  main.layout[8, 2] <- (single.recomp.result <- gbutton("Recompose - Result",
+  main.layout[9, 2] <- (single.recomp.result <- gbutton("Recompose - Result",
                                                         handler = function(h, ...) {
                                                           ts.info <- tsStructure
                                                           valid.ts <- valid.ts.info(ts.info)
@@ -329,11 +401,17 @@ timeSeries <- function(e) {
                                                           enabled(single.recomp.result) <- allow.recompose
                                                           if (valid.ts && valid.var) {
                                                             assign("stopAnimation", FALSE, envir = tsenv)
-                                                            tsRecompResult(var.df = var.df, start = ts.info$start,
-                                                                           frequency = ts.info$frequency, env = tsenv)
+                                                            var.df2 <- iNZightTS(tag(e$obj, "dataSet"), 
+                                                                                 start = ts.info$start,
+                                                                                 freq = ts.info$frequency,                                                                           
+                                                                                 var=svalue(tsVarselect,index= TRUE))
+                                                            #tsRecompResult(var.df = var.df, start = ts.info$start,
+                                                            #               frequency = ts.info$frequency, env = tsenv)
+                                                            iNZightTS:::recompose(decompositionplot(var.df2, ylab = svalue(ylab.input),
+                                                                                                    multiplicative = svalue(radio.group) == "Multiplicative"), animate=FALSE,e=tsenv)
                                                           }
                                                         }))
-  main.layout[9, 1:2] <- (single.seasonal <- gbutton("Seasonal effect",
+  main.layout[10, 1:2] <- (single.seasonal <- gbutton("Seasonplot",
                                                      handler = function(h, ...) {
                                                        ts.info <- tsStructure
                                                        valid.ts <- valid.ts.info(ts.info)
@@ -343,9 +421,15 @@ timeSeries <- function(e) {
                                                        enabled(recompose.start.anime) <- allow.recompose
                                                        enabled(single.recomp.result) <- allow.recompose
                                                        if (valid.ts && valid.var)
-                                                         tsSeasonal(var.df = var.df, start = ts.info$start, frequency = ts.info$frequency)
+                                                         var.df2 <- iNZightTS(tag(e$obj, "dataSet"), 
+                                                                              start = ts.info$start,
+                                                                              freq = ts.info$frequency,                                                                           
+                                                                              var=svalue(tsVarselect,index= TRUE))
+                                                         #tsSeasonal(var.df = var.df, start = ts.info$start, frequency = ts.info$frequency)
+                                                         seasonplot(var.df2,  season = svalue(radio.group) == "Multiplicative",
+                                                                    ylab = svalue(ylab.input))
                                                      }))
-  main.layout[10, 1:2] <- (single.forecast <- gbutton("Predict",
+  main.layout[11, 1:2] <- (single.forecast <- gbutton("Forecast",
                                                       handler = function(h, ...) {
                                                         ts.info <- tsStructure
                                                         valid.ts <- valid.ts.info(ts.info)
@@ -355,23 +439,58 @@ timeSeries <- function(e) {
                                                         enabled(recompose.start.anime) <- allow.recompose
                                                         enabled(single.recomp.result) <- allow.recompose
                                                         if (valid.ts && valid.var) {
-                                                          hwPredictionWindow(var.df, start = ts.info$start, frequency = ts.info$frequency)
-                                                          tsForecast(var.df = var.df, start = ts.info$start, frequency = ts.info$frequency)
+                                                          #hwPredictionWindow(var.df, start = ts.info$start, frequency = ts.info$frequency)
+                                                          #tsForecast(var.df = var.df, start = ts.info$start, frequency = ts.info$frequency)
+                                                          var.df2 <- iNZightTS(tag(e$obj, "dataSet"), 
+                                                                               start = ts.info$start,
+                                                                               freq = ts.info$frequency,                                                                           
+                                                                               var=svalue(tsVarselect,index= TRUE))
+                                                          forecastWindow(forecastplot(var.df2,  multiplicative = svalue(radio.group) == "Multiplicative",
+                                                                                      ylab = svalue(ylab.input), 
+                                                                                      show = FALSE))
+                                                          forecastplot(var.df2,  multiplicative = svalue(radio.group) == "Multiplicative",
+                                                                       ylab = svalue(ylab.input))
                                                         }
                                                       }))
-  main.layout[11, 1:2] <- (several.label <- glabel("Several Series"))
-  main.layout[12, 1:2] <- (several.compare.series <- gbutton("Compare Series", container = main.group,
-                                                             handler = function(h, ...) {
-                                                               ts.info <- tsStructure
-                                                               valid.ts <- valid.ts.info(ts.info)
-                                                               var.df <- tag(e$obj, "dataSet")[, svalue(tsVarselect), drop = FALSE]
-                                                               valid.var <- valid.vars(var.df)
-                                                               allow.recompose <- FALSE
-                                                               enabled(recompose.start.anime) <- allow.recompose
-                                                               enabled(single.recomp.result) <- allow.recompose
-                                                               if (valid.ts && valid.var)
-                                                                 compareSeries(var.df = var.df, start = ts.info$start, frequency = ts.info$frequency)
-                                                             }))
+  main.layout[12, 1:2] <- (several.label <- glabel("Several Series"))
+  several.compare.series <- gbutton("Multi-Plot",
+                                     handler = function(h, ...) {
+                                       ts.info <- tsStructure
+                                       valid.ts <- valid.ts.info(ts.info)
+                                       var.df <- tag(e$obj, "dataSet")[, svalue(tsVarselect), drop = FALSE]
+                                       valid.var <- valid.vars(var.df)
+                                       allow.recompose <- FALSE
+                                       enabled(recompose.start.anime) <- allow.recompose
+                                       enabled(single.recomp.result) <- allow.recompose
+                                       if (valid.ts && valid.var)
+                                         #compareSeries(var.df = var.df, start = ts.info$start, frequency = ts.info$frequency)
+                                         var.df2 <- iNZightTS(tag(e$obj, "dataSet"), 
+                                                              start = ts.info$start,
+                                                              freq = ts.info$frequency,                                                                           
+                                                              var=svalue(tsVarselect,index= TRUE))
+                                         multiseries(var.df2, ylab = svalue(ylab.input), 
+                                                     multiplicative = svalue(radio.group) == "Multiplicative")
+                                     })
+  main.layout[14, 1:2] <- several.compare.series
+  several.compare.series2 <- gbutton("Single-Plot",
+                                     handler = function(h, ...) {
+                                       ts.info <- tsStructure
+                                       valid.ts <- valid.ts.info(ts.info)
+                                       var.df <- tag(e$obj, "dataSet")[, svalue(tsVarselect), drop = FALSE]
+                                       valid.var <- valid.vars(var.df)
+                                       allow.recompose <- FALSE
+                                       enabled(recompose.start.anime) <- allow.recompose
+                                       enabled(single.recomp.result) <- allow.recompose
+                                       if (valid.ts && valid.var)
+                                         #compareSeries(var.df = var.df, start = ts.info$start, frequency = ts.info$frequency)
+                                         var.df2 <- iNZightTS(tag(e$obj, "dataSet"), 
+                                                              start = ts.info$start,
+                                                              freq = ts.info$frequency,                                                                           
+                                                              var=svalue(tsVarselect,index= TRUE))
+                                         compareplot(var.df2, ylab = svalue(ylab.input), 
+                                                     multiplicative = svalue(radio.group) == "Multiplicative")
+                                     })
+  main.layout[13, 1:2] <- several.compare.series2
   
   multiple.select.handler <- function(...) {
     ts.info <- tsStructure
@@ -397,6 +516,7 @@ timeSeries <- function(e) {
       enabled(single.forecast) <- FALSE
       enabled(several.label) <- TRUE
       enabled(several.compare.series) <- TRUE
+      enabled(several.compare.series2) <- TRUE
     } else if (n == 1) {
       enabled(single.label) <- TRUE
       #enabled(single.tsplot.animated) <- TRUE
@@ -411,6 +531,7 @@ timeSeries <- function(e) {
       enabled(single.forecast) <- show.annual
       enabled(several.label) <- FALSE
       enabled(several.compare.series) <- FALSE
+      enabled(several.compare.series2) <- FALSE
     } else {
       enabled(single.label) <- FALSE
       #enabled(single.tsplot.animated) <- FALSE
@@ -426,6 +547,7 @@ timeSeries <- function(e) {
       enabled(single.forecast) <- FALSE
       enabled(several.label) <- FALSE
       enabled(several.compare.series) <- FALSE
+      enabled(several.compare.series2) <- FALSE
     }
   }
   
@@ -437,244 +559,7 @@ timeSeries <- function(e) {
 }
 
 
-get.ts.structure <- function(vardata) {
-  if (is.factor(vardata))
-    vardata <- as.character(vardata)
-  
-  
-  if (any(is.na(vardata))) {
-    gmessage("There is a hole in your time series", icon = "error")
-    return(list(start = NA, freq = NA))
-  }
-  
-  
-  if (is.numeric(vardata)) {
-    if (any(vardata != round(vardata)))
-      return(list(start = NA, frequency = NA))
-    vardata <- as.character(vardata)
-    if (any(nchar(vardata) > 4))
-      return(list(start = NA, frequency = NA))
-  }
-  
-  
-  ## What frequency is the data at (monthly, quarterly, yearly)
-  firstval <- vardata[1]
-  if (nchar(firstval) > 7)
-    return(list(start = NA, frequency = NA))
-  if (nchar(firstval) > 4) {
-    interval <- substring(firstval, 5, 5)
-    freq <- ifelse(interval == "Q", 4, 12)
-  } else {
-    interval <- "A"
-    freq <- 1
-  }
-  
-  
-  # form the start value (used when we create ts objects)
-  start <- as.integer(substring(firstval, 1 ,4))
-  if (interval != "A")
-    start <- c(start, as.integer(substring(firstval, 6)))
-  
-  
-  # Checking that we have no holes in the time variable itself
-  n <- length(vardata)
-  lastyear <- if (is.character(vardata))
-    as.integer(substring(tail(vardata, 1), 1, 4))
-  else
-    tail(vardata, 1)
-  if (interval == "A") {
-    valid.time <- all(as.character(start:(start + (n - 1))) == vardata)
-    if (! valid.time) {
-      start <- NA
-      freq <- NA
-      gmessage("There is a hole in your time series", icon = "error")
-    }
-  }
-  
-  
-  if (interval == "Q") {
-    n.in.first.year <- freq - start[2] + 1
-    n.rest <- n - n.in.first.year
-    expected.years <- c(rep(start[1], n.in.first.year),
-                        rep((start[1] + 1):lastyear, each = freq, length.out = n.rest))
-    expected.quarters <- c(start[2]:(start[2] + (n.in.first.year - 1)),
-                           rep(1:4, length.out = n.rest))
-    expected.times <- paste(expected.years, "Q", expected.quarters, sep = "")
-    if (length(expected.times) != length(vardata) || ! all(vardata == expected.times)) {
-      start <- NA
-      freq <- NA
-      gmessage("There is a hole in your time series", icon = "error")
-    }
-  }
-  
-  
-  if (interval == "M") {
-    n.in.first.year <- freq - start[2] + 1
-    n.rest <- n - n.in.first.year
-    expected.years <- c(rep(start[1], n.in.first.year),
-                        rep((start[1] + 1):lastyear, each = freq, length.out = n.rest))
-    expected.months <- c(start[2]:(start[2] + (n.in.first.year - 1)),
-                         rep(1:12, length.out = n.rest))
-    expected.times <- paste(expected.years, "M", sprintf("%02d", expected.months), sep = "")
-    if (length(expected.times) != length(vardata) || ! all(vardata == expected.times)) {
-      start <- NA
-      freq <- NA
-      gmessage("There is a hole in your time series", icon = "error")
-    }
-  }
-  
-  
-  list(start = start, frequency = freq)
-}
 
-
-
-
-
-tsPlot <- function(var.df, start, frequency, animate, env) {
-  vars <- list(data = var.df, start = start, freq = frequency)
-  plot.raw.data(vars, animate = animate, e = env)
-}
-
-tsDecompose <- function(var.df, start, frequency) {
-  vars <- list(data = var.df, start = start, freq = frequency)
-  vars <- decomposition(vars)
-  plot.decomposition(vars)
-}
-
-tsRecompose <- function(var.df, start, frequency, env) {
-  vars <- list(data = var.df, start = start, freq = frequency)
-  vars <- decomposition(vars)
-  recompose(vars, animate = TRUE, e = env)
-}
-
-tsRecompResult <- function(var.df, start, frequency, env) {
-  vars <- list(data = var.df, start = start, freq = frequency)
-  vars <- decomposition(vars)
-  recompose(vars, animate = FALSE, e = env)
-}
-
-tsSeasonal <- function(var.df, start, frequency) {
-  vars <- list(data = var.df, start = start, freq = frequency)
-  make.seasonplot(vars)
-}
-
-hwPredictionWindow <- function(var.df, start, frequency) {
-  vars <- list(data = var.df, start = start, freq = frequency)
-  pw <- gwindow(title = "Prediction Output", width = 600, height = 400)
-  pg <- ggroup(horizontal = FALSE, use.scrollwindow = TRUE, container = pw)
-  predtext <- gtext("", font.attr = list(family = "monospace"), wrap = FALSE,
-                    expand = TRUE, container = pg)
-  
-  # Get output from HW fitting
-  vars = make.ts(vars, 1)
-  tsObj = vars$tsObj
-  x.vals = get.x(tsObj)
-  
-  # forecast 2 whole cycles ahead
-  ahead = 2 * vars$freq
-  
-  hw.fit = HoltWinters(tsObj)
-  pred = predict(hw.fit, n.ahead = ahead, TRUE)
-  
-  colnames(pred) <- c("fitted", "upper 95% bound", "lower 95% bound")
-  pred <- pred[, c(1, 3, 2)]
-  printed.text <- capture.output(print(pred))
-  insert(predtext, printed.text)
-}
-
-tsForecast <- function(var.df, start, frequency) {
-  vars <- list(data = var.df, start = start, freq = frequency)
-  hw.forecast(vars)
-}
-
-compareSeries <- function(var.df, start, frequency) {
-  vars <- list(data = var.df, start = start, freq = frequency)
-  # Dealing with multiple values
-  multiseries(vars)#, start, frequency)
-}
-
-get.ts.structure <- function(vardata) {
-  if (is.factor(vardata))
-    vardata <- as.character(vardata)
-  
-  if (any(is.na(vardata))) {
-    gmessage("There is a hole in your time series", icon = "error")
-    return(list(start = NA, freq = NA))
-  }
-  
-  if (is.numeric(vardata)) {
-    if (any(vardata != round(vardata)))
-      return(list(start = NA, frequency = NA))
-    vardata <- as.character(vardata)
-    if (any(nchar(vardata) > 4))
-      return(list(start = NA, frequency = NA))
-  }
-  
-  ## What frequency is the data at (monthly, quarterly, yearly)
-  firstval <- vardata[1]
-  if (nchar(firstval) > 7)
-    return(list(start = NA, frequency = NA))
-  if (nchar(firstval) > 4) {
-    interval <- substring(firstval, 5, 5)
-    freq <- ifelse(interval == "Q", 4, 12)
-  } else {
-    interval <- "A"
-    freq <- 1
-  }
-  
-  # form the start value (used when we create ts objects)
-  start <- as.integer(substring(firstval, 1 ,4))
-  if (interval != "A")
-    start <- c(start, as.integer(substring(firstval, 6)))
-  
-  # Checking that we have no holes in the time variable itself
-  n <- length(vardata)
-  lastyear <- if (is.character(vardata))
-    as.integer(substring(tail(vardata, 1), 1, 4))
-  else
-    tail(vardata, 1)
-  if (interval == "A") {
-    valid.time <- all(as.character(start:(start + (n - 1))) == vardata)
-    if (! valid.time) {
-      start <- NA
-      freq <- NA
-      gmessage("There is a hole in your time series", icon = "error")
-    }
-  }
-  
-  if (interval == "Q") {
-    n.in.first.year <- freq - start[2] + 1
-    n.rest <- n - n.in.first.year
-    expected.years <- c(rep(start[1], n.in.first.year),
-                        rep((start[1] + 1):lastyear, each = freq, length.out = n.rest))
-    expected.quarters <- c(start[2]:(start[2] + (n.in.first.year - 1)),
-                           rep(1:4, length.out = n.rest))
-    expected.times <- paste(expected.years, "Q", expected.quarters, sep = "")
-    if (length(expected.times) != length(vardata) || ! all(vardata == expected.times)) {
-      start <- NA
-      freq <- NA
-      gmessage("There is a hole in your time series", icon = "error")
-    }
-  }
-  
-  if (interval == "M") {
-    n.in.first.year <- freq - start[2] + 1
-    n.rest <- n - n.in.first.year
-    expected.years <- c(rep(start[1], n.in.first.year),
-                        rep((start[1] + 1):lastyear, each = freq, length.out = n.rest))
-    expected.months <- c(start[2]:(start[2] + (n.in.first.year - 1)),
-                         rep(1:12, length.out = n.rest))
-    expected.times <- paste(expected.years, "M", sprintf("%02d", expected.months), sep = "")
-    if (length(expected.times) != length(vardata) || ! all(vardata == expected.times)) {
-      start <- NA
-      freq <- NA
-      gmessage("There is a hole in your time series", icon = "error")
-    }
-  }
-  
-  list(start = start, frequency = freq)
-}
 
 valid.ts.info <- function(ts.info) {
   valid <- TRUE
@@ -697,3 +582,58 @@ valid.vars <- function(var.df) {
   }
   valid
 }
+
+
+createTSInfo <- function() {
+  tsconvwin <- gwindow("Provide Time Series Information")
+  tsgroup <- ggroup(horizontal = FALSE, container = tsconvwin)
+  tsvar.layout <- glayout(container = tsgroup)
+  tsvar.layout[1, 1, expand = FALSE] <- (tsStart1.lab <- glabel("Start Date"))
+  tsvar.layout[1, 2, expand = TRUE] <- (tsVarStart1 <- gedit(width = 30, height = 20))
+  tsvar.layout[2, 1, expand = FALSE] <- (tsStart2.lab <- glabel("Season Number"))
+  tsvar.layout[2, 2, expand = TRUE] <- (tsVarStart2 <- gedit(width = 30, height = 20))
+  tsvar.layout[3, 1, expand = FALSE] <- (tsFrequency.lab <- glabel("Frequency"))
+  tsvar.layout[3, 2, expand = TRUE] <- (tsVarFrequency <- gedit(width = 30, height = 20))
+  saveButton <- gbutton("Provide TS Info", container = tsgroup,
+                        handler = function(h, ...) {
+                          valid.params <- logical(3)
+                          valid.ts.args <- function(arg) {
+                            suppressWarnings(tmp <- as.integer(arg))
+                            ! is.na(tmp) && length(tmp) > 0
+                          }
+                          # Start Part 1 - starting value of the series (could be years)
+                          start.part1 <- svalue(tsVarStart1)
+                          valid.params[1] <- valid.ts.args(start.part1)
+                          # Start Part 2 - how far through the cycle of the first value we are
+                          start.part2 <- svalue(tsVarStart2)
+                          valid.params[2] <- valid.ts.args(start.part2)
+                          # Frequency - how many values does it take for us to increment "Start Part 1"
+                          frequency <- svalue(tsVarFrequency)
+                          valid.params[3] <- valid.ts.args(frequency)
+                          if (! all(valid.params)) {
+                            gmessage("One of your time series parameters is not an integer", icon = "error")
+                            return()
+                          }
+                          # Now we know all params are valid, cast to ints
+                          start.part1 <- as.integer(start.part1)
+                          start.part2 <- as.integer(start.part2)
+                          frequency <- as.integer(frequency)
+                          tsStructure <- list(start = c(start.part1, start.part2),
+                                                frequency = frequency)
+                          # Get rid of the window for now
+                          dispose(tsconvwin)
+                        })
+}
+
+
+forecastWindow <- function(forecastoutcome) {
+  
+  pw <- gwindow(title = "Forecast Output", width = 600, height = 400)
+  pg <- ggroup(horizontal = FALSE, use.scrollwindow = TRUE, container = pw)
+  predtext <- gtext("", font.attr = list(family = "monospace"), wrap = FALSE,
+                    expand = TRUE, container = pg)
+  printed.text <- capture.output(print(forecastoutcome))
+  insert(predtext, printed.text)
+}
+
+get.ts.structure <- iNZightTS:::get.ts.structure
