@@ -120,7 +120,8 @@ timeSeries <- function(e) {
                              enabled(single.forecast) <- FALSE
                              enabled(recompose.start.anime) <- FALSE
                              enabled(single.recomp.result) <- FALSE
-                             rawplot(var.df2, animate = TRUE, e= tsenv)
+                             rawplot(var.df2, ylab = svalue(ylab.input),
+                                     animate = TRUE, e= tsenv)
                              #tsPlot(var.df = var.df, start = ts.info$start,
                             #        frequency = ts.info$frequency, animate = TRUE, env = tsenv)
                              enabled(single.label) <- TRUE
