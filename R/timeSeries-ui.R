@@ -427,7 +427,7 @@ timeSeries <- function(e) {
                                                                               freq = ts.info$frequency,                                                                           
                                                                               var=svalue(tsVarselect,index= TRUE))
                                                          #tsSeasonal(var.df = var.df, start = ts.info$start, frequency = ts.info$frequency)
-                                                         seasonplot(var.df2,  season = svalue(radio.group) == "Multiplicative",
+                                                         seasonplot(var.df2,  multiplicative = svalue(radio.group) == "Multiplicative",
                                                                     ylab = svalue(ylab.input))
                                                      }))
   main.layout[11, 1:2] <- (single.forecast <- gbutton("Forecast",
