@@ -36,11 +36,20 @@ allBivarPlots <- function(e) {
                               } else if (i > ncol(data)) {
                                   dispose(w)
                               } else if (i > 1) {
-                                  iNZightPlots::iNZightPlot(data[, x.name],
-                                                            data[, o.name[i]],
+                                  X <- data[, x.name]
+                                  Y <- data[, o.name[i]]
+                                # Flip X and Y for numeric variables:
+                                  if (is.numeric(X) & is.numeric(Y)) {
+                                      iNZightPlots::iNZightPlot(Y, X,
+                                                            varnames =
+                                                            list(x = o.name[i],
+                                                                 y = x.name))
+                                  } else {
+                                      iNZightPlots::iNZightPlot(X, Y,
                                                             varnames =
                                                             list(x = x.name,
                                                                  y = o.name[i]))
+                                  }
                               } else {
                                   iNZightPlots::iNZightPlot(data[, x.name],
                                                             varnames =
