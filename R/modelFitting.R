@@ -346,7 +346,7 @@ modelFitting = function(e) {
   ## extra arguments for glm end
   
   ## complex survey 
-  svydes.vec <- character(6)
+  svydes.vec <- character(5)
   svycluster.label <- glabel("Cluster")
   svycluster.edit <- gcombobox(c("", "1", names(tag(modellingWin, "dataSet"))), 
                                handler = function(h, ...){
@@ -394,14 +394,14 @@ modelFitting = function(e) {
     
   })
   
-  svycnest.label <- glabel("Nested in Strata")
-  svycnest.box <- gcheckbox(checked = TRUE, handler = function(h, ...) {
-    if (svalue(svycnest.box)) 
-      svydes.vec[6] <<- paste0("check.strata = ", TRUE)
-    else
-      svydes.vec[6] <<- paste0("check.strata = ", FALSE)
+  #svycnest.label <- glabel("Nested in Strata")
+  #svycnest.box <- gcheckbox(checked = TRUE, handler = function(h, ...) {
+    #if (svalue(svycnest.box)) 
+     # svydes.vec[6] <<- paste0("check.strata = ", TRUE)
+    #else
+     # svydes.vec[6] <<- paste0("check.strata = ", FALSE)
     
-  })
+  #})
   
   svy.design <- NULL
   svy.frame <- gframe("survey design")
@@ -419,9 +419,9 @@ modelFitting = function(e) {
   svy.layout[4, 2, anchor =c(0, 0)] <- svyfpc.edit
   svy.layout[5, 1, anchor =c(0, 0)] <- svynest.label
   svy.layout[5, 2, anchor =c(0, 0)] <- svynest.box
-  svy.layout[6, 1, anchor =c(0, 0)] <- svycnest.label
-  svy.layout[6, 2, anchor =c(0, 0)] <- svycnest.box
-  svy.layout[7, 2, anchor =c(0, 0), expand = TRUE] <- svyextra.button
+  #svy.layout[6, 1, anchor =c(0, 0)] <- svycnest.label
+  #svy.layout[6, 2, anchor =c(0, 0)] <- svycnest.box
+  svy.layout[6, 2, anchor =c(0, 0), expand = TRUE] <- svyextra.button
   
   
   ## complex survey end
