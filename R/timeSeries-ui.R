@@ -120,7 +120,8 @@ timeSeries <- function(e) {
                              enabled(single.forecast) <- FALSE
                              enabled(recompose.start.anime) <- FALSE
                              enabled(single.recomp.result) <- FALSE
-                             rawplot(var.df2, ylab = svalue(ylab.input),
+                             
+                             rawplot(var.df2, ylab = svalue(ylab.input), xlab = svalue(xlab.input),
                                      animate = TRUE, e= tsenv)
                              #tsPlot(var.df = var.df, start = ts.info$start,
                             #        frequency = ts.info$frequency, animate = TRUE, env = tsenv)
@@ -163,8 +164,11 @@ timeSeries <- function(e) {
   radio.group <- gradio(c("Additive","Multiplicative"), selected=1, horizontal=TRUE, label = "model type")
   middle.layout[1,1] <- radio.group
   ylab.input <- gedit()
-  middle.layout[1,2] <- glabel("y label")
-  middle.layout[1,3] <- ylab.input
+  xlab.input <- gedit("Time")
+  middle.layout[2,1] <- glabel("x label")
+  middle.layout[3,1] <- xlab.input
+  middle.layout[2,2] <- glabel("y label")
+  middle.layout[3,2] <- ylab.input
   main.layout[5, 1:2] <- middle.layout
   main.layout[6, 1:2] <- (single.label <- glabel("Single Series"))
   small.layout <- glayout()
@@ -244,7 +248,7 @@ timeSeries <- function(e) {
                                                      assign("stopAnimation", FALSE, envir = tsenv)
                                                      #tsPlot(var.df = var.df, start = ts.info$start,
                                                     #        frequency = ts.info$frequency, animate = FALSE, env = tsenv)
-                                                    rawplot(var.df2, ylab = svalue(ylab.input),
+                                                    rawplot(var.df2, ylab = svalue(ylab.input), xlab = svalue(xlab.input),
                                                             multiplicative = svalue(radio.group) == "Multiplicative",
                                                             animate=FALSE, e = tsenv)
                                                    }
@@ -266,7 +270,7 @@ timeSeries <- function(e) {
                                                                                freq = ts.info$frequency,                                                                           
                                                                                var=svalue(tsVarselect,index= TRUE))
                                                           #tsDecompose(var.df = var.df, start = ts.info$start, frequency = ts.info$frequency)
-                                                          decompositionplot(var.df2, ylab = svalue(ylab.input), 
+                                                          decompositionplot(var.df2, ylab = svalue(ylab.input), xlab = svalue(xlab.input),
                                                                             multiplicative = svalue(radio.group) == "Multiplicative")
                                                         }
                                                       }))
@@ -299,7 +303,7 @@ timeSeries <- function(e) {
                                                             var=svalue(tsVarselect,index= TRUE))
                                        #tsRecompose(var.df = var.df, start = ts.info$start,
                                       #             frequency = ts.info$frequency, env = tsenv)
-                                      iNZightTS:::recompose(decompositionplot(var.df2, ylab = svalue(ylab.input),
+                                      iNZightTS:::recompose(decompositionplot(var.df2, ylab = svalue(ylab.input), xlab = svalue(xlab.input),
                                                                               multiplicative = svalue(radio.group) == "Multiplicative"), animate=TRUE,e=tsenv)
                                        enabled(single.label) <- TRUE
                                        #enabled(single.tsplot.animated) <- TRUE
@@ -408,7 +412,7 @@ timeSeries <- function(e) {
                                                                                  var=svalue(tsVarselect,index= TRUE))
                                                             #tsRecompResult(var.df = var.df, start = ts.info$start,
                                                             #               frequency = ts.info$frequency, env = tsenv)
-                                                            iNZightTS:::recompose(decompositionplot(var.df2, ylab = svalue(ylab.input),
+                                                            iNZightTS:::recompose(decompositionplot(var.df2, ylab = svalue(ylab.input), xlab = svalue(xlab.input),
                                                                                                     multiplicative = svalue(radio.group) == "Multiplicative"), animate=FALSE,e=tsenv)
                                                           }
                                                         }))
