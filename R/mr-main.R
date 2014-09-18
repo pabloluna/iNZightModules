@@ -73,7 +73,7 @@ multipleResponseWindow <- function(e) {
               #  return() #%
               frm <- as.formula(paste(inputMROname, "~", varPieces))
               #frm <- as.formula( "~", varPieces)
-              objs[[inputMROname]] <- try(mro2(frm, data = tag(mrWin, "dataSet")), silent = FALSE)
+              objs[[inputMROname]] <- try(iNZightMR(frm, data = tag(mrWin, "dataSet")), silent = FALSE)
               if (inherits(objs[[inputMROname]], "try-error")){
                 ttt <- unclass(objs[[inputMROname]])
                 gmessage(ttt)
@@ -226,8 +226,20 @@ multipleResponseWindow <- function(e) {
       
       if ( length(vars) != 0 && vars != " ") {
         by.formula <- as.formula(paste("~", vars))
-        barchart4(by(currentObj, by.formula, mroPara),
-                  YI = sub1, XI = sub2)
+        OBJ = byMRO(currentObj, by.formula, mroPara)
+        
+        if (!is.null(sub1)){
+          sub1 <- dimnames(OBJ)[[1]][sub1]
+        }
+        
+        if (is.null(sub2)){
+          sub2 <- "_MULTI"
+        }
+        else {
+          sub2 <- dimnames(OBJ)[[2]][sub2]
+        } 
+        
+        barplot(OBJ, g1.level = sub1, g2.level = sub2)
       }
       else{
         gmessage("Pick up at least one subset variable first", parent = mrWin)
@@ -251,7 +263,7 @@ multipleResponseWindow <- function(e) {
         by.formula <- as.formula(paste("~", vars))
         
         
-        txt <- capture.output(summary(by(currentObj,
+        txt <- capture.output(summary(byMRO(currentObj,
                                          by.formula,
                                          mroPara), "within"))
         mrSummaryWindow(txt)
@@ -271,8 +283,7 @@ multipleResponseWindow <- function(e) {
       if (! mrExists())
         return()
       currentObj <- tag(mrWin, "mrObjects")[[svalue(mrSelect)]]
-      browser()
-      mrSummaryWindow(capture.output(plotcombn(by(currentObj,
+      mrSummaryWindow(capture.output(plotcombn(byMRO(currentObj,
                                                   as.formula(paste("~",
                                                                    svalue(breakOutSelect))),
                                                   mroPara))
@@ -284,26 +295,48 @@ multipleResponseWindow <- function(e) {
       if (! mrExists())
         return()
       dev.new()
-      currentObj <- tag(mrWin, "mrObjects")[[svalue(mrSelect)]]
-      currSubset <- as.numeric(svalue(subsetSlider))
-      
-      
-      input.Subset <- NULL
-      
-      if (currSubset)
-        input.Subset <- currSubset
       
       vars <- svalue(breakOutSelect)
-      if (length(svalue(breakOutSelect2))!=0 && svalue(breakOutSelect2) != " ")
+      
+      currentObj <- tag(mrWin, "mrObjects")[[svalue(mrSelect)]]
+      
+      numOfExtVar = 1
+      if (length(svalue(breakOutSelect2))!=0 && svalue(breakOutSelect2) != " "){
         vars <- paste(vars, svalue(breakOutSelect2), sep = "+")
+        numOfExtVar = numOfExtVar + 1
+      }
+      
+      test1 <<- vars
+      test2 <<- currentObj
+      
+      sub1 <- NULL
+      if (svalue(subsetSlider)>0)
+        sub1 <- svalue(subsetSlider)
+      
+      sub2 <- NULL
+      !enabled(subsetSlider2)
+      if (svalue(subsetSlider2)>0)
+        sub2 <- svalue(subsetSlider2)
       
       
       if ( length(vars) != 0 && vars != " ") {
         by.formula <- as.formula(paste("~", vars))
-        barplot(between(by(currentObj,
-                           as.formula(paste("~",vars)),
-                           mroPara)))
+        OBJ = byMRO(currentObj, by.formula, mroPara)
+        
+
+        if (!is.null(sub2)){
+
+          sub2 <- dimnames(OBJ)[[2]][sub2]
+
+        } 
+        
+        if (numOfExtVar>1)
+          barplot(between2(OBJ), g1.level = sub2)
+        else
+          barplot(between2(OBJ))
       }
+      
+      
       else{
         gmessage("Pick up at least one subset variable first", parent = mrWin)
         
@@ -325,13 +358,13 @@ multipleResponseWindow <- function(e) {
         
         by.formula <- as.formula(paste("~", vars))
         
-        mybymro <- by(currentObj,
+        mybymro <- byMRO(currentObj,
                       by.formula ,
                       mroPara)
         
         
         Itest <<- mybymro
-        mrSummaryWindow(capture.output(summary(between(mybymro), mybymro)))
+        mrSummaryWindow(capture.output(summary(mybymro, "between")))
       }
       else{
         gmessage("Pick up at least one subset variable first", parent = mrWin)
