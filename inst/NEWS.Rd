@@ -5,6 +5,15 @@
 \section{Changes in version 1.0.4}{
   \subsection{MINOR CHANGES}{
     \itemize{
+      \item add scrollbars to Time Series window if it doesn't fit on
+      the screen
+    }
+  }
+}
+
+\section{Changes in version 1.0.4}{
+  \subsection{MINOR CHANGES}{
+    \itemize{
       \item along with change in iNZightTS, allow x-label on more plots
     }
   }
