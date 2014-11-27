@@ -4,8 +4,15 @@ timeSeries <- function(e) {
     tsStructure <- list(start = NA, frequency = NA)
     tag(e$obj, "tsStructure") <- list(start = NA, frequency = NA)
     fully.loaded <- FALSE
-    tswin <- gwindow(title = "Time Series", expand = FALSE)
-    main.group <- ggroup(horizontal = FALSE, expand = TRUE, container = tswin)
+    tswin <- gwindow(title = "Time Series", expand = FALSE, visible = FALSE,
+                     width = 500, height = 750)
+    #size(tswin) <- c(500, 750)
+
+    ## Make the window scrollable:
+    scrolledWindow <- gtkScrolledWindow()
+    scrolledWindow$setPolicy("GTK_POLICY_AUTOMATIC", "GTK_POLICY_AUTOMATIC")
+    
+    main.group <- ggroup(horizontal = FALSE, expand = TRUE)
     main.layout <- glayout(container = main.group)
     main.layout[1:2, 1] <-
         (ts.select <-
@@ -465,7 +472,7 @@ timeSeries <- function(e) {
                                      freq = ts.info$frequency,
                                      var=svalue(tsVarselect,index= TRUE))
             ##tsSeasonal(var.df = var.df, start = ts.info$start, frequency = ts.info$frequency)
-            seasonplot(var.df2,  multiplicative = svalue(radio.group) == "Multiplicative",
+            iNZightTS::seasonplot(var.df2,  multiplicative = svalue(radio.group) == "Multiplicative",
                        ylab = svalue(ylab.input))
         }
     ))
@@ -605,6 +612,12 @@ timeSeries <- function(e) {
     ## correct buttons
     addHandlerSelectionChanged(tsVarselect, handler = multiple.select.handler)
     multiple.select.handler()
+
+
+    ## Make it show!
+    scrolledWindow$addWithViewport(main.group$widget)
+    add(tswin, scrolledWindow, expand = TRUE, fill = TRUE)
+    visible(tswin) <- TRUE
 }
 
 
