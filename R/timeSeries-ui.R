@@ -1,6 +1,16 @@
 # This is a module used for graphical time series analysis.
 timeSeries <- function(e) {  
     tsenv <- new.env()
+    ##  Something like this should be added in the right place so we can
+    ##  issue a helpful warning message whenever the user forgets to
+    ##  import a data set before entering the time series module.
+    ##
+    ##  if (length(variablename) == 1 && variablename == "empty") {
+    ##      gmessage(msg = "A dataset is required to use the
+    ##                     time series module",
+    ##              title = "No data", icon = "error")
+    ##      return()
+    ##  }
     tsStructure <- list(start = NA, frequency = NA)
     tag(e$obj, "tsStructure") <- list(start = NA, frequency = NA)
     fully.loaded <- FALSE
