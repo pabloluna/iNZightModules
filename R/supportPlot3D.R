@@ -1,7 +1,7 @@
-.onAttach <- function(...) {
-    if (!"package:rgl" %in% search())
-        require(rgl)
-}
+## .onAttach <- function(...) {
+##     if (!"package:rgl" %in% search())
+##         require(rgl)
+## }
 
 scatter3d <- function(x, y, z,
                       xlab=deparse(substitute(x)), ylab=deparse(substitute(y)),
@@ -19,6 +19,7 @@ scatter3d <- function(x, y, z,
                       sphere.size=1, threshold=0.01, speed=1, fov=60,
                       fit="linear", groups=NULL, parallel=TRUE, ellipsoid=FALSE, level=0.5,
                       model.summary=FALSE){
+  require(rgl)                      
   use.gams <- suppressPackageStartupMessages(require(mgcv))
   if (residuals == "squares"){
     residuals <- TRUE
