@@ -18,7 +18,8 @@ scatter3d <- function(x, y, z,
                       df.smooth=NULL, df.additive=NULL,
                       sphere.size=1, threshold=0.01, speed=1, fov=60,
                       fit="linear", groups=NULL, parallel=TRUE, ellipsoid=FALSE, level=0.5,
-                      model.summary=FALSE){
+                      model.summary = FALSE) {
+  ##  Load "rgl" only when the "scatter3d" function is called..
   require(rgl)                      
   use.gams <- suppressPackageStartupMessages(require(mgcv))
   if (residuals == "squares"){
