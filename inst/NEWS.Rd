@@ -2,6 +2,16 @@
 \title{Change Log for iNZightModules}
 \encoding{UTF-8}
 
+\section{Changes in version 1.0.6}{
+  Release date: 04 February 2015
+  
+  \subsection{BUG FIXES}{
+    \itemize{
+      \item fix an issue where RGL causes R on some Windows 8 machines to crash
+    }
+  }
+}
+
 \section{Changes in version 1.0.5}{
   Release date: 27 November 2014
   
