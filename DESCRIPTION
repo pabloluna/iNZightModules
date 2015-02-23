@@ -2,7 +2,7 @@ Package: iNZightModules
 Type: Package
 Title: iNZight GUI Modules
 Version: 1.0.7
-Date: 2015-02-04
+Date: 2015-02-23
 Authors@R: c(person("Junjie", "Zeng", role = c('cre', 'aut'),
                     email = "jzen188@aucklanduni.ac.nz"),
              person("Dineika", "Chandrananda", role = "aut"),		
