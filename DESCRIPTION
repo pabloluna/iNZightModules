@@ -8,7 +8,7 @@ Authors@R: c(person("Tom", "Elliott", role = c("aut", "cre"),
              person("Junjie", "Zeng", role = c('aut')),
              person("Dineika", "Chandrananda", role = "aut"),		
              person("Simon", "Potter", role = "aut"),
-             person("David", "Banks", role = "aut")
+             person("David", "Banks", role = "aut"))
 Depends: R (>= 2.13)
 Imports: iNZightRegression, iNZightMR, iNZightTS, iNZightTools, survey, mgcv, barcode, gpairs
 License: GPL-2
