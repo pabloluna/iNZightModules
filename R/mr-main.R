@@ -331,9 +331,9 @@ multipleResponseWindow <- function(e) {
         } 
         
         if (numOfExtVar>1)
-          barplot(between2(OBJ), g1.level = sub2)
+          barplot(between(OBJ), g1.level = sub2)
         else
-          barplot(between2(OBJ))
+          barplot(between(OBJ))
       }
       
       
