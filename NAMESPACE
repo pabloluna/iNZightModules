@@ -1,5 +1,5 @@
 export(modelFitting, multipleResponseWindow, mrSummaryWindow, plot3D,
        scatterPlotMatrix, timeSeries, allUniPlots, allBivarPlots)
-import(iNZightRegression, iNZightMR, iNZightTS, iNZightTools, mgcv, survey, barcode, gpairs)
+import(iNZightRegression, iNZightMR, iNZightTS, iNZightTools, mgcv, survey, barcode, gpairs, gWidgets2, gWidgets2RGtk2, RGtk2)
 #importFrom(iNZightTools, fitModel, fitDesign)
 export(barcode)
