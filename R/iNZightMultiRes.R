@@ -228,4 +228,4 @@ iNZightMultiRes <- setRefClass(
     )
 )
 
-iNZightMultiRes()
+#iNZightMultiRes()
