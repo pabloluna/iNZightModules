@@ -7,15 +7,13 @@ iNZightTS <- setRefClass(
     ),
     methods = list(
         initialize = function(GUI) {
-            initFields(GUI = GUI)
-            dat = GUI$getActiveData()
-            activeData <<- tsData(dat)
-            # tsStructure <<- list(start = NA, frequency = NA)
-            mainGrp <<- gvbox(spacing = 10, container = GUI$moduleWindow,
-                             expand = TRUE)
+#             initFields(GUI = GUI)
+#             dat = GUI$getActiveData()
+#             activeData <<- tsData(dat)
+#             mainGrp <<- gvbox(spacing = 10, container = GUI$moduleWindow, expand = TRUE)
             
-#             g = gwindow(width = 300, height = 600)
-#             mainGrp <<- gvbox(spacing = 10, container = g, expand = TRUE)
+            g = gwindow(width = 300, height = 600)
+            mainGrp <<- gvbox(spacing = 10, container = g, expand = TRUE)
             mainGrp$set_borderwidth(15)
             
             ################
