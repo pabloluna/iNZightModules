@@ -12,16 +12,17 @@ iNZightMultiRes <- setRefClass(
     
     methods = list(
         initialize = function(GUI) {
-            g = gwindow(width = 300, height = 600)
-            mainGrp <<- gvbox(spacing = 10, container = g, expand = TRUE)
+            # g = gwindow(width = 300, height = 600)
+            # mainGrp <<- gvbox(spacing = 10, container = g, expand = TRUE)
+            # activeData <<- read.csv("//Users/eric/Desktop/CaS.csv")
             
-            # initFields(GUI = GUI)
-            # dat = GUI$getActiveData()
-            # activeData <<- tsData(dat)
-            activeData <<- read.csv("//Users/eric/Desktop/CaS.csv")
-            # mainGrp <<- gvbox(spacing = 10, container = GUI$moduleWindow, expand = TRUE)
+            initFields(GUI = GUI)
+            activeData <<- GUI$getActiveData()
+            mainGrp <<- gvbox(spacing = 10, container = GUI$moduleWindow, expand = TRUE)
+            
             mainGrp$set_borderwidth(2)
-            top = ggroup(container = mainGrp)
+            top = ggroup(container = mainGrp,  expand = TRUE)
+            mid = glayout(container = mainGrp, expand = TRUE)
             bot = glayout(container = mainGrp, expand = FALSE)
             
             # ==========
@@ -31,7 +32,7 @@ iNZightMultiRes <- setRefClass(
             vars      <<- names(activeData)
             gtab = gtable(paste("(b)", vars[binaryVar]), multiple = TRUE, container = top)
             names(gtab) = "VARIABLES (b = binary)"
-            size(gtab)  = c(280, 300)
+            size(gtab)  = c(280, 280)
             
             top.timer = NULL
             addHandlerClicked(gtab, handler = function(h, ...) {
@@ -46,6 +47,8 @@ iNZightMultiRes <- setRefClass(
                         enabled(box1)      = FALSE
                         enabled(sumButton) = FALSE
                         enabled(comButton) = FALSE
+                        svalue(box1, index = TRUE) = 1
+                        svalue(box2, index = TRUE) = 1
                     }
                     updatePlot(gtab)
                 }, one.shot = TRUE)
@@ -53,20 +56,39 @@ iNZightMultiRes <- setRefClass(
             
             
             # =============
-            # bottom panel
+            # mid panel
             # =============
-            box1 = gcombobox(c("Select Variable 1", vars))
-            box2 = gcombobox(c("Select Variable 2", vars))
+            box1 = gcombobox(c("Select Subset Variable 1", vars))
+            box2 = gcombobox(c("Select Subset Variable 2", vars))
+            
             size(box1) = c(230, 25)
             size(box2) = c(230, 25)
             slider1 = gslider(0, 1)
             slider2 = gslider(0, 1)
+            
+            ## cancel buttons
+            cancelButton1 = gbutton("", handler = function(h,...) {
+                svalue(box1, index = TRUE) = 1
+                updatePlot(gtab)
+            })
+            cancelButton2 = gbutton("", handler = function(h,...) {
+                svalue(box2, index = TRUE) = 1
+                by.formula = paste("~", svalue(box1))
+                byMRObject <<- byMRO(mrObject, by.formula, mroPara)
+                barplot(byMRObject)
+            })
+            cancelButton1$set_icon("Cancel")
+            cancelButton2$set_icon("Cancel")
+            
+            ## check box
+            chk = gcheckbox("Side-by-side")
             
             ## default is unabled
             enabled(box1)    = FALSE
             enabled(box2)    = FALSE
             enabled(slider1) = FALSE
             enabled(slider2) = FALSE
+            enabled(chk)     = FALSE
             
             box1.timer = NULL
             addHandlerChanged(box1, handler = function(h,...) {
@@ -79,12 +101,13 @@ iNZightMultiRes <- setRefClass(
                         enabled(slider1) = FALSE
                         enabled(slider2) = FALSE
                         slider1[] = 0:1
+                        updatePlot(gtab)
                     } else {
                         enabled(box2)    = TRUE
                         enabled(slider1) = TRUE
                         subsetVar = iNZightPlots::convert.to.factor(activeData[, s1])
                         slider1[] = 0:nlevels(subsetVar)
-                        if (svalue(box2,index=TRUE) > 1) {
+                        if (svalue(box2,index = TRUE) > 1) {
                             by.formula = paste("~", paste(svalue(box1), "+", svalue(box2)))
                             byMRObject <<- byMRO(mrObject, by.formula, mroPara)
                             barplot(between(byMRObject))
@@ -106,53 +129,65 @@ iNZightMultiRes <- setRefClass(
                 box2.timer = gtimer(500, function(...) {
                     s2 = svalue(box2, index = TRUE) - 1
                     if (s2 == 0) {
+                        enabled(chk) = FALSE
+                        svalue(chk)  = FALSE
                         enabled(slider2)   = FALSE
                         enabled(comButton) = TRUE
                         slider2[] = 0:1
+                        by.formula = paste("~", svalue(box1))
+                        byMRObject <<- byMRO(mrObject, by.formula, mroPara)
+                        barplot(byMRObject)
                     } else {
+                        enabled(chk)       = TRUE
                         enabled(slider2)   = TRUE
                         enabled(comButton) = FALSE
                         subsetVar = iNZightPlots::convert.to.factor(activeData[, s2])
                         slider2[] = 0:nlevels(subsetVar)
                         by.formula = paste("~", paste(svalue(box1), "+", svalue(box2)))
                         byMRObject <<- byMRO(mrObject, by.formula, mroPara)
-                        barplot(between(byMRObject))
+                        # barplot(between(byMRObject))
+                        barplot(byMRObject)
                     }
                 }, one.shot = TRUE)
             })
             
-            
-            bot[1, 1:6, anchor = c(0,0), expand = TRUE] = box1
-            bot[3, 1:6, anchor = c(0,0), expand = TRUE] = box2
-            bot[2, 1:7, anchor = c(0,0), expand = TRUE] = slider1
-            bot[4, 1:7, anchor = c(0,0), expand = TRUE] = slider2
-            
-            ## cancel buttons
-            cancelButton1 = gbutton("", handler = function(h,...) {
-                svalue(box1, index = TRUE) = 1
+            chk.timer = NULL
+            addHandlerChanged(chk, handler = function(h,...) {
+                if (!is.null(chk.timer))
+                    chk.timer$stop_timer()
+                chk.timer = gtimer(500, function(...) {
+                    if (svalue(chk))
+                        barplot(between(byMRObject))
+                    else
+                        barplot(byMRObject)
+                }, one.shot = TRUE)
             })
-            cancelButton2 = gbutton("", handler = function(h,...) {
-                svalue(box2, index = TRUE) = 1
-            })
-            cancelButton1$set_icon("Cancel")
-            cancelButton2$set_icon("Cancel")
-            bot[1, 7, anchor = c(0,0)] = cancelButton1
-            bot[3, 7, anchor = c(0,0)] = cancelButton2
+            
+            mid[1, 1:7, anchor = c(0,0), expand = TRUE] = box1
+            mid[3, 1:7, anchor = c(0,0), expand = TRUE] = box2
+            mid[2, 1:8, anchor = c(0,0), expand = TRUE] = slider1
+            mid[4, 1:8, anchor = c(0,0), expand = TRUE] = slider2
+            mid[1, 8,   anchor = c(0,0)] = cancelButton1
+            mid[3, 8,   anchor = c(0,0)] = cancelButton2
+            mid[5, 1,   anchor = c(0,0)] = chk
             
             ## summary button
             sumButton = gbutton("Summary", handler = function(h,...) {
                 s1 = svalue(box1, index = TRUE)
                 s2 = svalue(box2, index = TRUE)
                 if (s1 == 1) {
-                    summaryWindow(capture.output(summary(mroPara(mrObject))), mode = 1)
+                    # summaryWindow(capture.output(summary(mroPara(mrObject))), mode = 1)
+                    txt = capture.output(summary(mroPara(mrObject)))
+                    summaryWindow(txt, mode = 1)
                 } else if (s1 != 1 & s2 == 1) {
                     txt = capture.output(summary(byMRObject, "within"))
                     summaryWindow(txt, mode = 2)
                 } else if (s1 != 1 & s2 != 1) {
+                    txt = capture.output(summary(byMRObject, "between"))
+                    summaryWindow(txt, mode = 3)
                 }
             })
             enabled(sumButton) = FALSE
-            bot[14, 1:4, anchor = c(0,0)] = sumButton
             
             ## combinations
             comButton = gbutton("Combinations", handler = function(h,...) {
@@ -167,7 +202,22 @@ iNZightMultiRes <- setRefClass(
                 }
             })
             enabled(comButton) = FALSE
-            bot[14, 5:7, anchor = c(0,0)] = comButton
+            
+            ## back button
+            back = gbutton("Back", handler = function(h,...) {
+                # tooltip = "Click to go back"
+                # icon = "gtk-go-back",
+                visible(GUI$moduleWindow) <<- FALSE
+                visible(GUI$gp1)          <<- TRUE
+            })
+            font(back) <- list(weight="bold", family="normal", color="navy")
+            
+            
+            bot[1, 1, anchor = c(0,0), expand = TRUE] = sumButton
+            bot[1, 2, anchor = c(0,0), expand = TRUE] = comButton
+            bot[2, 1:2, anchor = c(0,0), expand = TRUE] = back
+            
+            
             
         },
         
@@ -227,5 +277,3 @@ iNZightMultiRes <- setRefClass(
         }
     )
 )
-
-#iNZightMultiRes()
