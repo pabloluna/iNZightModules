@@ -1,4 +1,7 @@
-export(modelFitting, plot3D, scatterPlotMatrix, allUniPlots, allBivarPlots, iNZightMaps, iNZightMultiRes)
-import(iNZightRegression, iNZightMR, iNZightTS, iNZightTools, mgcv, survey, barcode, gpairs)
+export(modelFitting, plot3D, scatterPlotMatrix, allUniPlots, allBivarPlots,
+       iNZightMapMod, iNZightMultiRes)
+import(iNZightRegression, iNZightMR, iNZightTS, iNZightTools, mgcv, survey,
+       barcode, gpairs, iNZightMaps)
+#importMethodsFrom(iNZightMaps, plot)
 #importFrom(iNZightTools, fitModel, fitDesign)
 export(barcode)
