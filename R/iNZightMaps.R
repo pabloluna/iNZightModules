@@ -23,7 +23,8 @@ iNZightMapMod <- setRefClass(
         mainGrp     = "ANY",
         activeData  = "data.frame",
         map.vars    = "ANY",
-        map.object  = "ANY"
+        map.object  = "ANY",
+        map.type    = "ANY"
     ),
 
 
@@ -107,6 +108,7 @@ iNZightMapMod <- setRefClass(
         ##   - Can create as many as needed
         setVars = function(names) {
             map.vars <<- names
+            map.type <<- "roadmap"
 
             createMapObject()
         },
@@ -198,13 +200,23 @@ iNZightMapMod <- setRefClass(
           tbl[ii, 1, anchor = c(-1, -1)] <- lbl
           tbl[ii, 2, expand = TRUE] <- opctyVarList
           ii <- ii + 1
+
+          ii <- ii + 1
+
+          lbl <- glabel("Map type :")
+          typeOpts <- c("roadmap", "satellite", "terrain", "hybrid")
+          typeList <- gcombobox(typeOpts)
+          tbl[ii, 1, anchor = c(-1, -1)] <- lbl
+          tbl[ii, 2, expand = TRUE] <- typeList
           
           
           ## Maintain a single function that is called whenever anything is updated:
           updateEverything <- function() {
-              if (svalue(colVarList, TRUE) > 1) map.vars$colby <<- svalue(colVarList)
-              if (svalue(rszVarList, TRUE) > 1) map.vars$sizeby <<- svalue(rszVarList)
-              if (svalue(opctyVarList, TRUE) > 1) map.vars$opacity <<- svalue(opctyVarList)
+              if (svalue(colVarList, TRUE) > 1) map.vars$colby <<- svalue(colVarList) else map.vars$colby <<- NULL
+              if (svalue(rszVarList, TRUE) > 1) map.vars$sizeby <<- svalue(rszVarList) else map.vars$sizeby <<- NULL
+              if (svalue(opctyVarList, TRUE) > 1) map.vars$opacity <<- svalue(opctyVarList) else map.vars$opacity <<- NULL
+
+              map.type <<- svalue(typeList)
 
               updatePlot()
           }
@@ -213,6 +225,7 @@ iNZightMapMod <- setRefClass(
           addHandlerChanged(colVarList, handler = function(h, ...) updateEverything())
           addHandlerChanged(rszVarList, handler = function(h, ...) updateEverything())
           addHandlerChanged(opctyVarList, handler = function(h, ...) updateEverything())
+          addHandlerChanged(typeList, handler = function(h, ...) updateEverything())
           
           ## addHandlerChanged(grpVarList,
           ##                   handler = function(h, ...) {
@@ -266,6 +279,9 @@ iNZightMapMod <- setRefClass(
                 args$opacity <- map.vars$opacity
                 args$varnames$opacity = map.vars$opacity
             }
+
+            #if (!is.null(map.type))
+            args$type <- map.type
             
             do.call("plot.inzightmap", args)
         }
