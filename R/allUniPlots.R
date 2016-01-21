@@ -1,3 +1,17 @@
+##' Explore all univariate plots
+##'
+##' Opens a pop-up window that allows users to click through all univariate plots,
+##' which is useful for quickly exploring large data sets.
+##' 
+##' @title Explore All Univariate Plots
+##' 
+##' @param e (depreciated ... will be updated in future)
+##' 
+##' @return NULL
+##' 
+##' @author Tom Elliott
+##' 
+##' @export
 allUniPlots <- function(e) {
     win <- e$win
     data <- tag(e$obj, "dataSet")

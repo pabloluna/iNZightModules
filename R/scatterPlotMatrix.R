@@ -1,3 +1,18 @@
+##' Draws a matrix of all plot-combinations based on selected variables.
+##'
+##' User selects variables, they are drawn.
+##' 
+##' @title Scatterplot Matrix
+##' @param e going, going, going ...
+##' @param ... more opts
+##' 
+##' @return NULL
+##'
+##' @importFrom gpairs gpairs
+##' 
+##' @author iNZight Team
+##' 
+##' @export
 scatterPlotMatrix <- function(e, ...) {
     e$scatterPlotWinOpened <- TRUE
     varList <- names(tag(e$obj, "dataSet"))
@@ -47,10 +62,12 @@ scatterPlotMatrix <- function(e, ...) {
                                   which(names(d) %in% chosenVars)
     
                               dev.new()
+                              dev.hold()
                               gpairs(d[, chosenVarIndices],
                                      upper.pars = list(conditional = "stripplot"),
                                      scatter.pars = scatter.pars,
                                      stripplot.pars = stripplot.pars)
+                              dev.flush()
                           })
     font(plotButton) <- list(weight = "bold")
 }

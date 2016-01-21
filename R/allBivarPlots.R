@@ -1,3 +1,17 @@
+##' Explore all bivariate plots
+##'
+##' Opens a pop-up window that allows users to click through all bivariate plots, after
+##' selecting the "primary variable of interest"
+##' 
+##' @title Explore All Bivariate Plots
+##' 
+##' @param e (depreciated ... will be updated in future)
+##' 
+##' @return NULL
+##' 
+##' @author Tom Elliott
+##' 
+##' @export
 allBivarPlots <- function(e) {
     win <- e$win
     data <- tag(e$obj, "dataSet")

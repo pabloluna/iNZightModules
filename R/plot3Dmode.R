@@ -1,3 +1,14 @@
+##' Plot 3D: Three-dimentional, interactive graphics
+##'
+##' Allows users to plot three continuous variables, as well as one categorical variable.
+##' 
+##' @title 3D Plot
+##' 
+##' @param e depreciated ... will be removed
+##' 
+##' @return NULL
+##'
+##' @export
 plot3D = function(e){
   
   currentDevice = dev.cur()
@@ -173,10 +184,10 @@ plot3D = function(e){
   #controlsGroupLayout[8,3] = plotButton
   
   
-  addDropTarget(responseDrop, handler = function(h,...) svalue(responseDrop) = gWidgets::id(h$dropdata))
-  addDropTarget(covariateDrop2, handler = function(h,...) svalue(covariateDrop2) = gWidgets::id(h$dropdata))
-  addDropTarget(covariateDrop1, handler = function(h,...) svalue(covariateDrop1) = gWidgets::id(h$dropdata))
-  addDropTarget(groupDrop, handler = function(h,...) svalue(groupDrop) = gWidgets::id(h$dropdata))
+  addDropTarget(responseDrop, handler = function(h,...) svalue(responseDrop) = h$dropdata)
+  addDropTarget(covariateDrop2, handler = function(h,...) svalue(covariateDrop2) = h$dropdata)
+  addDropTarget(covariateDrop1, handler = function(h,...) svalue(covariateDrop1) = h$dropdata)
+  addDropTarget(groupDrop, handler = function(h,...) svalue(groupDrop) = h$dropdata)
   
   add(controlsGroup, controlsGroupLayout)
   add(controlsGroup, identifyGp)
