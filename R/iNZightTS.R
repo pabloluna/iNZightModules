@@ -1,5 +1,17 @@
-## iNZightTS <- setRefClass(
-##     "iNZightTS",
+## ##' iNZight Time Series Module
+## ##'
+## ##' A GUI add-on for visualising and doing basic inference and prediction of time series data.
+## ##'
+## ##' @title iNZight Time Series Module
+## ##'
+## ##' @author Eric Lim
+## ##'
+## ##' @import iNZightTS
+## ##' 
+## ##' @export iNZightTSMod
+## ##' @exportClass iNZightTSMod
+## iNZightTSMod <- setRefClass(
+##     "iNZightTSMod",
 ##     fields = list(
 ##         GUI         = "ANY",
 ##         mainGrp     = "ANY",
@@ -7,13 +19,15 @@
 ##     ),
 ##     methods = list(
 ##         initialize = function(GUI) {
-## #             initFields(GUI = GUI)
-## #             dat = GUI$getActiveData()
-## #             activeData <<- tsData(dat)
-## #             mainGrp <<- gvbox(spacing = 10, container = GUI$moduleWindow, expand = TRUE)
+##             initFields(GUI = GUI)
+##             dat = GUI$getActiveData()
+##             activeData <<- tsData(dat)
+
+##             GUI$initializeModuleWindow()
+##             mainGrp <<- gvbox(spacing = 10, container = GUI$moduleWindow, expand = TRUE)
             
-##             g = gwindow(width = 300, height = 600)
-##             mainGrp <<- gvbox(spacing = 10, container = g, expand = TRUE)
+##             #g = gwindow(width = 300, height = 600)
+##             mainGrp <<- gvbox(spacing = 10, container = mainGrp, expand = TRUE)
 ##             mainGrp$set_borderwidth(15)
             
 ##             ################
@@ -184,6 +198,8 @@
 ##             g5[2, 2, expand = TRUE] = g5_opt4
 ##             g5[2, 3, expand = TRUE] = g5_opt5
 ##             g5[3, 1:3, expand = TRUE] = cancelButton
+
+##             visible(GUI$moduleWindow) <<- TRUE
 ##         },
         
 ##         # ========

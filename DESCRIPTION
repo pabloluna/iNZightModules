@@ -21,6 +21,7 @@ Imports:
     iNZightRegression,
     iNZightTools,
     iNZightMR,
+    iNZightTS,
     gpairs,
     methods
 License: GPL-2
