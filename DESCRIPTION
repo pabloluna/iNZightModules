@@ -22,6 +22,7 @@ Imports:
     iNZightTools,
     iNZightMR,
     iNZightTS,
+    iNZightMaps,
     gpairs,
     methods
 License: GPL-2
