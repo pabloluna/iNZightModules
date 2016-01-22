@@ -5,6 +5,8 @@
 ##' 
 ##' @name iNZightModules
 ##' @docType package
+##'
+##' @import methods
 ##' 
 ##' @author Tom Elliott, Eric Lim, Junjie Zeng, Simon Potter, Dineika Chandranada, David Banks
 ##'

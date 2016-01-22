@@ -20,8 +20,9 @@ Imports:
     iNZightPlots,
     iNZightRegression,
     iNZightTools,
-    survey,
-    gpairs
+    iNZightMR,
+    gpairs,
+    methods
 License: GPL-2
 Description: A suite of add-on modules for the iNZight GUI, including model
     fitting module, multiple response, time series, and some advanced plotting.
