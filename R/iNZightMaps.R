@@ -68,6 +68,15 @@ iNZightMapMod <- setRefClass(
                 }
             }
 
+            ## Temporary until maps is on R repo ...
+            if (!"maptools" %in% rownames(installed.packages()))
+                utils::install.packages("maptools", repos = "http://cran.stat.auckland.ac.nz")
+            if (!require(maptools)) gmessage("Please install `maptools`.")
+            
+            if (!"RgoogleMaps" %in% rownames(installed.packages()))
+                utils::install.packages("RgoogleMaps", repos = "http://cran.stat.auckland.ac.nz")
+            if (!require(RgoogleMaps)) gmessage("Please install `RgoogleMaps`.")
+
             ## Configure the data / variables for mapping:
             ## activeData
             activeData <<- GUI$getActiveData()
@@ -169,9 +178,9 @@ iNZightMapMod <- setRefClass(
             
             
             ## Reconfigure the Plot Toolbar:
-            
-            ## (to do)
-            
+            zoomBtn <- gimage(stock.id = "zoom-in", size = "button")
+            addHandlerClicked(zoomBtn, function(h, ...) gmessage("HA!"))
+            GUI$plotToolbar$update(NULL, refresh = "updatePlot", extra = list(zoomBtn))
             
             ## mainGrp
             mainGrp <<- gvbox(spacing = 10, container = GUI$moduleWindow, expand = TRUE)
@@ -456,6 +465,7 @@ iNZightMapMod <- setRefClass(
                                     ## delete the module window
                                     delete(GUI$leftMain, GUI$leftMain$children[[2]])
                                     ## display the default view (data, variable, etc.)
+                                    GUI$plotToolbar$restore()
                                     visible(GUI$gp1) <<- TRUE
                                 })
             
