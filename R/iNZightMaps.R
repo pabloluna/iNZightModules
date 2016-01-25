@@ -57,8 +57,8 @@ iNZightMapMod <- setRefClass(
                                  title = "Install Maps package", icon = "question", parent = GUI$win)
 
                 if (resp) {
-                    install.packages("iNZightMaps", repos = c("http://cran.stat.auckland.ac.nz",
-                                                        "http://r.docker.stat.auckland.ac.nz/R"))
+                    utils::install.packages("iNZightMaps", repos = c("http://cran.stat.auckland.ac.nz",
+                                                               "http://r.docker.stat.auckland.ac.nz/R"))
                     if (!require(iNZightMaps)) {
                         gmessage("Unable to install package. Please check the website.")
                         return(NULL)
