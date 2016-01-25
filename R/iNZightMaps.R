@@ -477,7 +477,7 @@ iNZightMapMod <- setRefClass(
             ## build the level names that are used for the slider
             grpData <- activeData[dropdata][[1]]
             grpData <- iNZightPlots:::convert.to.factor(grpData)
-            if (pos == 8)
+            if (pos == 2)
                 lev <- c("_MULTI", levels(grpData))
             else
                 lev <- c("_ALL", levels(grpData), "_MULTI")
@@ -485,21 +485,22 @@ iNZightMapMod <- setRefClass(
             slider <- gslider(from = lev,
                               value = 1)
             add(sliderGrp, slider, expand = FALSE)
-            if (pos == 8)
+            if (pos == 2)
                 grp = "g1"
             else
                 grp = "g2"
             ## update the plot settings whenever the slider changes
             addHandlerChanged(slider, handler = function(h, ...) {
-                              changePlotSettings(
-                                  structure(list(
-                                      as.character(svalue(h$obj))),
-                                            .Names = paste(
-                                                grp,
-                                                "level",
-                                                sep = ".")
-                                            )
-                                  )
+                                  lbl <- paste(grp, "level", sep = ".")
+                                  changePlotSettings(
+                                      structure(list(
+                                          as.character(svalue(h$obj)),
+                                          structure(list(as.character(svalue(h$obj))),
+                                                    .Names = lbl
+                                                    )),
+                                                .Names = c(lbl, "varnames")
+                                                )
+                                      )
                           })
             lbl <- levels(grpData)
             ## if the level names are too long, replace them with nr
@@ -556,8 +557,13 @@ iNZightMapMod <- setRefClass(
         },
         changePlotSettings = function(set, reset = FALSE) {
             map.vars <<- c(map.vars, set$varnames)
+
             set$varnames <- NULL
-            extra.args <<- set
+            if (reset)
+                extra.args <<- set
+            else
+                extra.args <<- modifyList(extra.args, set, keep.null = TRUE)
+            
             updatePlot()
         },
         ## update plot function
@@ -575,6 +581,16 @@ iNZightMapMod <- setRefClass(
                 args$opacity <- map.vars$opacity
                 args$varnames$opacity = map.vars$opacity
             }
+            if (!is.null(map.vars$g1)) {
+                args$varnames$g1 = map.vars$g1
+                if (!is.null(map.vars$g1.level))
+                    args$varnames$g1.level <- map.vars$g1.level
+            }
+            if (!is.null(map.vars$g2)) {
+                args$varnames$g2 = map.vars$g2
+                if (!is.null(map.vars$g2.level))
+                    args$varnames$g2.level <- map.vars$g2.level
+            }
 
             args$col.pt <- map.vars$col.pt
             args$cex.pt <- map.vars$cex.pt
@@ -585,7 +601,6 @@ iNZightMapMod <- setRefClass(
             if (!is.null(extra.args))
                 args <- c(args, extra.args)
 
-            
             do.call(plot, args)
 
             return(invisible(NULL))
