@@ -5,7 +5,7 @@
 ##' @title iNZight Maps Module
 ##'
 ##' @author Tom Elliott
-##' 
+##'
 ##' @export iNZightMapMod
 ##' @exportClass iNZightMapMod
 iNZightMapMod <- setRefClass(
@@ -49,6 +49,24 @@ iNZightMapMod <- setRefClass(
         initialize = function(GUI) {
             ## GUI
             initFields(GUI = GUI)
+
+            if ("iNZightMaps" %in% rownames(installed.packages())) {
+                require(iNZightMaps)
+            } else {
+                resp <- gconfirm("The Maps package isn't installed. Do you want to install it now?",
+                                 title = "Install Maps package", icon = "question", parent = GUI$win)
+
+                if (resp) {
+                    install.packages("iNZightMaps", repos = c("http://cran.stat.auckland.ac.nz",
+                                                        "http://r.docker.stat.auckland.ac.nz/R"))
+                    if (!require(iNZightMaps)) {
+                        gmessage("Unable to install package. Please check the website.")
+                        return(NULL)
+                    }
+                } else {
+                    return(NULL)
+                }
+            }
 
             ## Configure the data / variables for mapping:
             ## activeData
@@ -136,10 +154,10 @@ iNZightMapMod <- setRefClass(
             createMapObject()
         },
         createMapObject = function() {
-          map.object <<- iNZightMaps::iNZightMap(lat = eval(parse(text = paste("~", map.vars$latitude))),
-                                                 lon = eval(parse(text = paste("~", map.vars$longitude))),
-                                                 data = activeData,
-                                                 name = GUI$dataNameWidget$datName)
+            map.object <<- iNZightMap(lat = eval(parse(text = paste("~", map.vars$latitude))),
+                                      lon = eval(parse(text = paste("~", map.vars$longitude))),
+                                      data = activeData,
+                                      name = GUI$dataNameWidget$datName)
         },
         ## get only numeric type variables
         numericVars = function() {
@@ -564,12 +582,11 @@ iNZightMapMod <- setRefClass(
 
             args$type <- map.type
 
-            print(extra.args)
             if (!is.null(extra.args))
                 args <- c(args, extra.args)
 
             
-            do.call("plot.inzightmap", args)
+            do.call(plot, args)
 
             return(invisible(NULL))
         }
