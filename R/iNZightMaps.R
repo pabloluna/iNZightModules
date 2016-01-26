@@ -50,16 +50,14 @@ iNZightMapMod <- setRefClass(
             ## GUI
             initFields(GUI = GUI)
 
-            if ("iNZightMaps" %in% rownames(installed.packages())) {
-                require(iNZightMaps)
-            } else {
+            if (!requireNamespace("iNZightMaps", quietly = TRUE)) {
                 resp <- gconfirm("The Maps package isn't installed. Do you want to install it now?",
                                  title = "Install Maps package", icon = "question", parent = GUI$win)
 
                 if (resp) {
                     utils::install.packages("iNZightMaps", repos = c("http://cran.stat.auckland.ac.nz",
                                                                "http://r.docker.stat.auckland.ac.nz/R"))
-                    if (!require(iNZightMaps)) {
+                    if (!requireNamespace("iNZightMaps", quietly = TRUE)) {
                         gmessage("Unable to install package. Please check the website.")
                         return(NULL)
                     }
@@ -68,14 +66,18 @@ iNZightMapMod <- setRefClass(
                 }
             }
 
-            ## Temporary until maps is on R repo ...
+            ## Temporary until iNZightMaps is on the docker repository
             if (!"maptools" %in% rownames(installed.packages()))
                 utils::install.packages("maptools", repos = "http://cran.stat.auckland.ac.nz")
-            if (!require(maptools)) gmessage("Please install `maptools`.")
-            
+            if (!requireNamespace("maptools")) gmessage("Please install `maptools`.")
+
             if (!"RgoogleMaps" %in% rownames(installed.packages()))
                 utils::install.packages("RgoogleMaps", repos = "http://cran.stat.auckland.ac.nz")
-            if (!require(RgoogleMaps)) gmessage("Please install `RgoogleMaps`.")
+            if (!requireNamespace("RgoogleMaps")) gmessage("Please install `RgoogleMaps`.")
+
+            if (!"RColorBrewer" %in% rownames(installed.packages()))
+                utils::install.packages("RColorBrewer", repos = "http://cran.stat.auckland.ac.nz")
+            if (!requireNamespace("RColorBrewer")) gmessage("Please install `RColorBrewer`.")
 
             ## Configure the data / variables for mapping:
             ## activeData
@@ -163,7 +165,7 @@ iNZightMapMod <- setRefClass(
             createMapObject()
         },
         createMapObject = function() {
-            map.object <<- iNZightMap(lat = eval(parse(text = paste("~", map.vars$latitude))),
+            map.object <<- iNZightMaps::iNZightMap(lat = eval(parse(text = paste("~", map.vars$latitude))),
                                       lon = eval(parse(text = paste("~", map.vars$longitude))),
                                       data = activeData,
                                       name = GUI$dataNameWidget$datName)
@@ -175,35 +177,35 @@ iNZightMapMod <- setRefClass(
         ## initiate the module only when the data has been set
         initiateModule = function() {
             GUI$initializeModuleWindow()
-            
-            
+
+
             ## Reconfigure the Plot Toolbar:
             zoomBtn <- gimage(stock.id = "zoom-in", size = "button")
             addHandlerClicked(zoomBtn, function(h, ...) gmessage("HA!"))
             GUI$plotToolbar$update(NULL, refresh = "updatePlot", extra = list(zoomBtn))
-            
+
             ## mainGrp
             mainGrp <<- gvbox(spacing = 10, container = GUI$moduleWindow, expand = TRUE)
             mainGrp$set_borderwidth(5)
-            
+
             addSpace(mainGrp, 15)
-            
+
             lbl1 <- glabel("Maps Module")
             font(lbl1) <- list(weight = "bold",
                                family = "normal",
                                size   = 12)
             add(mainGrp, lbl1, anchor = c(0, 0))
             addSpace(mainGrp, 20)
-            
-            
+
+
             tbl <- glayout()
             ii <- 1
-            
+
             lbl <- glabel("Code Variables")
             font(lbl) <- list(weight = "bold", size = 11)
             tbl[ii, 1:2, anchor = c(-1, -1), expand = TRUE] <- lbl
             ii <- ii + 1
-            
+
             lbl <- glabel("Colour by :")
             colVarList <- gcombobox(c("", names(GUI$getActiveData())),
                                     selected = ifelse(
@@ -215,12 +217,12 @@ iNZightMapMod <- setRefClass(
             tbl[ii, 1, anchor = c(1, 0), expand = TRUE] <- lbl
             tbl[ii, 2, expand = TRUE] <- colVarList
             ii <- ii + 1
-            
+
             ## lvlCols <- gbutton("Specify colours")
             ## tbl[ii, 2, expand = TRUE] <- lvlCols
             ## visible(lvlCols) <- svalue(grpVarList, index = TRUE) != 1
             ## ii <- ii + 1
-            
+
             ## addHandlerClicked(lvlCols, function(h, ...) {
             ##                       variable <- GUI$getActiveData()[, svalue(grpVarList, index = FALSE)]
             ##                       if (is.numeric(variable)) {
@@ -229,8 +231,8 @@ iNZightMapMod <- setRefClass(
             ##                           specifyColours(variable)
             ##                       }
             ##                   })
-            
-            
+
+
             lbl <- glabel("Size by :")
             rszVarList <- gcombobox(
                 c("", rszNames <- names(activeData)[sapply(activeData, is.numeric)]),
@@ -242,8 +244,8 @@ iNZightMapMod <- setRefClass(
             tbl[ii, 1, anchor = c(1, 0), expand = TRUE] <- lbl
             tbl[ii, 2, expand = TRUE] <- rszVarList
             ii <- ii + 1
-            
-            
+
+
             lbl <- glabel("Opacify by :")
             opctyVarList <- gcombobox(
                 c("", numNames <- names(activeData)[sapply(activeData, is.numeric)]),
@@ -255,24 +257,24 @@ iNZightMapMod <- setRefClass(
             tbl[ii, 1, anchor = c(1, 0), expand = TRUE] <- lbl
             tbl[ii, 2, expand = TRUE] <- opctyVarList
             ii <- ii + 1
-            
+
             ii <- ii + 1
             ii <- ii + 1
             lbl <- glabel("Plot Options")
             font(lbl) <- list(weight = "bold", size = 11)
             tbl[ii, 1:2, anchor = c(-1, -1), expand = TRUE] <- lbl
             ii <- ii + 1
-            
-            
+
+
             lbl <- glabel("Map type :")
             typeOpts <- c("roadmap", "satellite", "terrain", "hybrid")
             typeList <- gcombobox(typeOpts)
             tbl[ii, 1, anchor = c(1, 0), expand = TRUE] <- lbl
             tbl[ii, 2, expand = TRUE] <- typeList
             ii <- ii + 1
-            
-            
-            ## COLOUR            
+
+
+            ## COLOUR
             lbl <- glabel("Colour :")
             pointCols <- c("grey50", "black", "darkblue", "darkgreen",
                            "darkmagenta", "darkslateblue", "hotpink4",
@@ -284,12 +286,12 @@ iNZightMapMod <- setRefClass(
                     1,
                     which(pointCols == map.vars$col.pt)[1]),
                 editable = TRUE)
-            
+
             tbl[ii,  1, anchor = c(1, 0), expand = TRUE] <- lbl
             tbl[ii,  2, expand = TRUE] <- symbolColList
             ii <- ii + 1
-            
-            
+
+
             ## Point sizes
             lbl <- glabel("Point size :")
             cexSlider <- gslider(from = 0.05, to = 3.5,
@@ -297,7 +299,7 @@ iNZightMapMod <- setRefClass(
             tbl[ii, 1, anchor = c(1, 0), expand = TRUE] <- lbl
             tbl[ii, 2, expand = TRUE] <- cexSlider
             ii <- ii + 1
-            
+
             ## Transparency
             lbl <- glabel("Transparency :")
             transpSlider <- gslider(from = 0, to = 100,
@@ -305,31 +307,31 @@ iNZightMapMod <- setRefClass(
             tbl[ii, 1, anchor = c(1, 0), expand = TRUE] <- lbl
             tbl[ii, 2, expand = TRUE] <- transpSlider
             ii <- ii + 1
-            
-            
-            
-            
+
+
+
+
             ## Maintain a single function that is called whenever anything is updated:
             updateEverything <- function() {
                 if (svalue(colVarList, TRUE) > 1) map.vars$colby <<- svalue(colVarList) else map.vars$colby <<- NULL
                 if (svalue(rszVarList, TRUE) > 1) map.vars$sizeby <<- svalue(rszVarList) else map.vars$sizeby <<- NULL
                 if (svalue(opctyVarList, TRUE) > 1) map.vars$opacity <<- svalue(opctyVarList) else map.vars$opacity <<- NULL
-                
+
                 map.vars$col.pt <<- svalue(symbolColList)
                 map.vars$cex.pt <<- svalue(cexSlider)
                 map.vars$alpha <<- 1 - svalue(transpSlider) / 100
-                
+
                 map.type <<- svalue(typeList)
-                
+
                 updatePlot()
             }
-            
+
             ## in this case, no point in having a separate "show" button
             addHandlerChanged(colVarList, handler = function(h, ...) updateEverything())
             addHandlerChanged(rszVarList, handler = function(h, ...) updateEverything())
             addHandlerChanged(opctyVarList, handler = function(h, ...) updateEverything())
             addHandlerChanged(typeList, handler = function(h, ...) updateEverything())
-            
+
             pcoltimer <- NULL
             addHandlerChanged(symbolColList,
                               handler = function(h, ...) {
@@ -340,7 +342,7 @@ iNZightMapMod <- setRefClass(
                                                               updateEverything()
                                                       }, one.shot = TRUE)
                               })
-            
+
             cextimer <- NULL
             addHandlerChanged(cexSlider,
                               handler = function(h, ...) {
@@ -348,7 +350,7 @@ iNZightMapMod <- setRefClass(
                                       cextimer$stop_timer()
                                   cextimer <- gtimer(500, function(...) updateEverything(), one.shot = TRUE)
                               })
-            
+
             transptimer <- NULL
             addHandlerChanged(transpSlider,
                               handler = function(h, ...) {
@@ -356,19 +358,19 @@ iNZightMapMod <- setRefClass(
                                       transptimer$stop_timer()
                                   transptimer <- gtimer(500, function(...) updateEverything(), one.shot = TRUE)
                               })
-            
+
             add(mainGrp, tbl)
-            
-            
+
+
             addSpring(mainGrp)
             ## --------------------------------------------------  SLIDERS
             grpTbl <<- glayout(expand = FALSE, cont = mainGrp)
             G1box <- gcombobox(c("Select Subset Variable 1", colnames(activeData)))
             G2box <- gcombobox(c("Select Subset Variable 2", colnames(activeData)))
-            
+
             grpTbl[1, 1:5, anchor = c(0, 0), expand = TRUE] <<- G1box
             grpTbl[3, 1:5, anchor = c(0, 0), expand = TRUE] <<- G2box
-            
+
             ## -- Grouping Variable 1
             G1clearbtn <- gbutton("",
                                   handler = function(h,...) {
@@ -377,7 +379,7 @@ iNZightMapMod <- setRefClass(
                                   })
             G1clearbtn$set_icon("Cancel")
             grpTbl[1, 7, anchor = c(0, 0)] <<- G1clearbtn
-            
+
             ## -- Grouping Variable 2
             G2clearbtn <- gbutton("",
                                   handler = function(h,...) {
@@ -385,7 +387,7 @@ iNZightMapMod <- setRefClass(
                                   })
             G2clearbtn$set_icon("Cancel")
             grpTbl[3, 7, anchor = c(0, 0)] <<- G2clearbtn
-            
+
             ## slider 1
             addHandlerChanged(
                 G1box,
@@ -416,7 +418,7 @@ iNZightMapMod <- setRefClass(
                         }
                     }
                 })
-            
+
             ## slider 2
             addHandlerChanged(
                 G2box,
@@ -447,13 +449,13 @@ iNZightMapMod <- setRefClass(
                         }
                     }
                 })
-            
-            
+
+
             ## close buton
-            
-            
+
+
             btmGrp <- ggroup(cont = mainGrp)
-            
+
             helpButton <- gbutton("Help", expand = TRUE, fill = TRUE,
                                   cont = btmGrp,
                                   handler = function(h, ...) {
@@ -468,9 +470,9 @@ iNZightMapMod <- setRefClass(
                                     GUI$plotToolbar$restore()
                                     visible(GUI$gp1) <<- TRUE
                                 })
-            
+
             visible(GUI$moduleWindow) <<- TRUE
-            
+
             updatePlot()
         },
         createSlider = function(pos, dropdata) {
@@ -573,7 +575,7 @@ iNZightMapMod <- setRefClass(
                 extra.args <<- set
             else
                 extra.args <<- modifyList(extra.args, set, keep.null = TRUE)
-            
+
             updatePlot()
         },
         ## update plot function
