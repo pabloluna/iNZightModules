@@ -9,7 +9,7 @@
 ##' @author Eric Lim
 ##'
 ##' @import iNZightMR
-##' 
+##'
 ##' @export iNZightMultiRes
 ##' @exportClass iNZightMultiRes
 iNZightMultiRes <- setRefClass(
@@ -20,178 +20,208 @@ iNZightMultiRes <- setRefClass(
         activeData = "data.frame",
         vars       = "character",
         binaryVar  = "numeric",
+        mid        = "ANY",
+        gtab       = "ANY",
         mrObject   = "ANY",
-        byMRObject = "ANY"
+        byMRObject = "ANY",
+        plotSet    = "ANY",
+        objName    = "character",
+        guessName  = "logical"
     ),
-    
+
     methods = list(
         initialize = function(GUI) {
-            # g = gwindow(width = 300, height = 600)
-            # mainGrp <<- gvbox(spacing = 10, container = g, expand = TRUE)
-            # activeData <<- read.csv("//Users/eric/Desktop/CaS.csv")
             
-            initFields(GUI = GUI)
+            initFields(GUI = GUI, plotSet = list(), objName = "response", guessName = TRUE)
             activeData <<- GUI$getActiveData()
-            mainGrp <<- gvbox(spacing = 10, container = GUI$moduleWindow, expand = TRUE)
             
-            mainGrp$set_borderwidth(2)
-            top = ggroup(container = mainGrp,  expand = TRUE)
-            mid = glayout(container = mainGrp, expand = TRUE)
-            bot = glayout(container = mainGrp, expand = FALSE)
-            
+
             # ==========
             # top panel
             # ==========
             binaryVar <<- getVars(activeData)
-            vars      <<- names(activeData)
-            gtab = gtable(paste("(b)", vars[binaryVar]), multiple = TRUE, container = top)
-            names(gtab) = "VARIABLES (b = binary)"
-            size(gtab)  = c(280, 280)
+
+            if (length(binaryVar) == 0) {
+                gmessage(
+                    "Unable to find any binary variables. Code any variables as: ['yes', 'no'] or [0,1] to use this module.",
+                    icon = "error", title = "No Binary Variables", parent = GUI$win)
+                return(NULL)
+            }
+
+            GUI$initializeModuleWindow()
+            mainGrp <<- gvbox(spacing = 10, container = GUI$moduleWindow, expand = TRUE)
+            mainGrp$set_borderwidth(5)
+
+            lbl1 <- glabel("Multiple Response Module")
+            font(lbl1) <- list(weight = "bold",
+                               family = "normal",
+                               size   = 12)
+            add(mainGrp, lbl1, anchor = c(0, 0))
+            addSpace(mainGrp, 20)
+
+            mainGrp$set_borderwidth(2)
+            top <- gvbox(container = mainGrp)
+            mid <<- glayout(container = mainGrp, expand = FALSE)
+            addSpring(mainGrp)
+            bot <- glayout(container = mainGrp, expand = FALSE)
             
+            lab <- glabel("Select related variables:")
+            font(lab) <- list(weight = "bold", size = 11)
+            add(top, lab, anchor = c(-1, -1))
+            
+            
+            vars <<- names(activeData)
+            gtab <<- gtable(vars[binaryVar], multiple = TRUE, container = top)
+            names(gtab) <<- "VARIABLES"
+            size(gtab)  <<- c(280, 280)
+
             top.timer = NULL
             addHandlerClicked(gtab, handler = function(h, ...) {
                 if (!is.null(top.timer))
                     top.timer$stop_timer()
                 top.timer = gtimer(500, function(...) {
                     if (length(svalue(gtab)) >= 2) {
-                        enabled(box1)      = TRUE
+                        visible(G1clearbtn) <- visible(G1box) <- enabled(G1box) <- TRUE
+                        visible(G2clearbtn) <- visible(G2box) <- enabled(G2box) <- svalue(G1box, index = TRUE) != 1
                         enabled(sumButton) = TRUE
                         enabled(comButton) = TRUE
-                    } else {
-                        enabled(box1)      = FALSE
-                        enabled(sumButton) = FALSE
-                        enabled(comButton) = FALSE
-                        svalue(box1, index = TRUE) = 1
-                        svalue(box2, index = TRUE) = 1
+
+                        setMRobj()
                     }
-                    updatePlot(gtab)
                 }, one.shot = TRUE)
             })
-            
-            
+
+
             # =============
             # mid panel
             # =============
-            box1 = gcombobox(c("Select Subset Variable 1", vars))
-            box2 = gcombobox(c("Select Subset Variable 2", vars))
+
+            ## --------------------------------------------------  SLIDERS
+            G1box <- gcombobox(c("Select Subset Variable 1", vars))
+            G2box <- gcombobox(c("Select Subset Variable 2", vars))
             
-            size(box1) = c(230, 25)
-            size(box2) = c(230, 25)
-            slider1 = gslider(0, 1)
-            slider2 = gslider(0, 1)
-            
-            ## cancel buttons
-            cancelButton1 = gbutton("", handler = function(h,...) {
-                svalue(box1, index = TRUE) = 1
-                updatePlot(gtab)
-            })
-            cancelButton2 = gbutton("", handler = function(h,...) {
-                svalue(box2, index = TRUE) = 1
-                by.formula = paste("~", svalue(box1))
-                byMRObject <<- byMRO(mrObject, by.formula, mroPara)
-                barplotMR(byMRObject)
-            })
-            cancelButton1$set_icon("Cancel")
-            cancelButton2$set_icon("Cancel")
-            
-            ## check box
-            chk = gcheckbox("Side-by-side")
-            
-            ## default is unabled
-            enabled(box1)    = FALSE
-            enabled(box2)    = FALSE
-            enabled(slider1) = FALSE
-            enabled(slider2) = FALSE
-            enabled(chk)     = FALSE
-            
-            box1.timer = NULL
-            addHandlerChanged(box1, handler = function(h,...) {
-                if (!is.null(box1.timer))
-                    box1.timer$stop_timer()
-                box1.timer = gtimer(500, function(...) {
-                    s1 = svalue(box1, index = TRUE) - 1
-                    if (s1 == 0) {
-                        enabled(box2)    = FALSE
-                        enabled(slider1) = FALSE
-                        enabled(slider2) = FALSE
-                        slider1[] = 0:1
-                        updatePlot(gtab)
+            mid[1, 1:5, anchor = c(0, 0), expand = TRUE] <<- G1box
+            mid[3, 1:5, anchor = c(0, 0), expand = TRUE] <<- G2box
+
+            ## -- Grouping Variable 1
+            G1clearbtn <- gbutton("",
+                                  handler = function(h,...) {
+                                      svalue(G1box, index = TRUE) <- 1
+                                      ## change handler will handle the rest
+                                  })
+            G1clearbtn$set_icon("Cancel")
+            mid[1, 7, anchor = c(0, 0)] <<- G1clearbtn
+
+            ## -- Grouping Variable 2
+            G2clearbtn <- gbutton("",
+                                  handler = function(h,...) {
+                                      svalue(G2box, index = TRUE) <- 1
+                                  })
+            G2clearbtn$set_icon("Cancel")
+            mid[3, 7, anchor = c(0, 0)] <<- G2clearbtn
+
+            ## --- check box for Side-by-side Variable 1
+            sideChk = gcheckbox("Display subset variable 1 Side-by-side")
+            mid[5, 1:5, anchor = c(-1, 0), expand = TRUE] <<- sideChk
+            visible(sideChk) <- enabled(sideChk) <- svalue(G1box, index = TRUE) > 1 & svalue(G2box, index = TRUE) > 1
+            addHandlerChanged(sideChk, function(h, ...) {
+                                  changePlotSettings(list(sidebyside = svalue(sideChk)))
+                              })
+
+            ## --- enable/disable appropriately
+            visible(G1clearbtn) <- visible(G1box) <- enabled(G1box) <-
+                length(svalue(gtab, index = TRUE)) > 1
+            visible(G2clearbtn) <- visible(G2box) <- enabled(G2box) <-
+                length(svalue(gtab, index = TRUE)) > 1 && svalue(G1box, index = TRUE) != 1
+
+            ## slider 1
+            addHandlerChanged(
+                G1box,
+                handler = function(h, ...) {
+                    if (svalue(G1box) == svalue(G2box)) {
+                        svalue(G1box, index = TRUE) <- 1
+                        gmessage("You cannot use the same variable in both subsetting slots.",
+                                 parent = GUI$win)
                     } else {
-                        enabled(box2)    = TRUE
-                        enabled(slider1) = TRUE
-                        subsetVar = iNZightPlots::convert.to.factor(activeData[, s1])
-                        slider1[] = 0:nlevels(subsetVar)
-                        if (svalue(box2,index = TRUE) > 1) {
-                            by.formula = paste("~", paste(svalue(box1), "+", svalue(box2)))
-                            byMRObject <<- byMRO(mrObject, by.formula, mroPara)
-                            barplotMR(between(byMRObject))
+                        deleteSlider(pos = 2)
+                        if (svalue(G1box, index = TRUE) > 1) {
+                            val <- svalue(G1box)
+                            createSlider(pos = 2, val)
+                            changePlotSettings(list(
+                                g1 = svalue(G1box),
+                                g1.level = "_MULTI",
+                                varnames = list(
+                                    g1 = val)
+                                ))
                         } else {
-                            by.formula = paste("~", svalue(box1))
-                            byMRObject <<- byMRO(mrObject, by.formula, mroPara)
-                            barplotMR(byMRObject)
+                            changePlotSettings(list(g1 = NULL,
+                                                    g1.level = NULL,
+                                                    varnames = list(
+                                                        g1 = NULL)
+                                                    ), reset = TRUE)
                         }
-                        # byMRObject <<- byMRO(mrObject, by.formula, mroPara)
-                        # barplotMR(byMRObject)
                     }
-                }, one.shot = TRUE)
-            })
-            
-            box2.timer = NULL
-            addHandlerChanged(box2, handler = function(h,...) {
-                if (!is.null(box2.timer))
-                    box2.timer$stop_timer()
-                box2.timer = gtimer(500, function(...) {
-                    s2 = svalue(box2, index = TRUE) - 1
-                    if (s2 == 0) {
-                        enabled(chk) = FALSE
-                        svalue(chk)  = FALSE
-                        enabled(slider2)   = FALSE
-                        enabled(comButton) = TRUE
-                        slider2[] = 0:1
-                        by.formula = paste("~", svalue(box1))
-                        byMRObject <<- byMRO(mrObject, by.formula, mroPara)
-                        barplotMR(byMRObject)
+
+                    s1 <- svalue(G1box, index = TRUE) - 1
+                    if (s1 == 0) {
+                        visible(G2clearbtn) <-visible(G2box) <- enabled(G2box) <- FALSE
+                        visible(sideChk) <- enabled(sideChk) <- FALSE
+                        svalue(G2box, index = TRUE) <- 1
+                        enabled(comButton) <- TRUE
                     } else {
-                        enabled(chk)       = TRUE
-                        enabled(slider2)   = TRUE
-                        enabled(comButton) = FALSE
-                        subsetVar = iNZightPlots::convert.to.factor(activeData[, s2])
-                        slider2[] = 0:nlevels(subsetVar)
-                        by.formula = paste("~", paste(svalue(box1), "+", svalue(box2)))
-                        byMRObject <<- byMRO(mrObject, by.formula, mroPara)
-                        # barplotMR(between(byMRObject))
-                        barplotMR(byMRObject)
+                        visible(G2clearbtn) <- visible(G2box) <- enabled(G2box) <- TRUE
+                        visible(sideChk) <- enabled(sideChk) <- svalue(G2box, index = TRUE) > 1
+                        enabled(comButton) <- FALSE
                     }
-                }, one.shot = TRUE)
-            })
-            
-            chk.timer = NULL
-            addHandlerChanged(chk, handler = function(h,...) {
-                if (!is.null(chk.timer))
-                    chk.timer$stop_timer()
-                chk.timer = gtimer(500, function(...) {
-                    if (svalue(chk))
-                        barplotMR(between(byMRObject))
-                    else
-                        barplotMR(byMRObject)
-                }, one.shot = TRUE)
-            })
-            
-            mid[1, 1:7, anchor = c(0,0), expand = TRUE] = box1
-            mid[3, 1:7, anchor = c(0,0), expand = TRUE] = box2
-            mid[2, 1:8, anchor = c(0,0), expand = TRUE] = slider1
-            mid[4, 1:8, anchor = c(0,0), expand = TRUE] = slider2
-            mid[1, 8,   anchor = c(0,0)] = cancelButton1
-            mid[3, 8,   anchor = c(0,0)] = cancelButton2
-            mid[5, 1,   anchor = c(0,0)] = chk
-            
+                    
+                })
+
+            ## slider 2
+            addHandlerChanged(
+                G2box,
+                handler = function(h, ...) {
+                    if (svalue(G2box) == svalue(G1box)) {
+                        svalue(G2box, index = TRUE) <- 1
+                        gmessage("You cannot use the same variable in both subsetting slots.",
+                                 parent = GUI$win)
+                    } else {
+                        deleteSlider(pos = 4)
+                        if (svalue(G2box, index = TRUE) > 1) {
+                            val <- svalue(G2box)
+                            createSlider(pos = 4, val)
+                            changePlotSettings(list(
+                                g2 = svalue(G2box),
+                                g2.level = "_ALL",
+                                varnames = list(
+                                    g2 = val)
+                                ))
+                        } else {
+                            changePlotSettings(list(g2 = NULL,
+                                                    g2.level = NULL,
+                                                    varnames = list(
+                                                        g2 = NULL)
+                                                    ), reset = TRUE)
+                        }
+                    }
+
+                    s2 <- svalue(G2box, index = TRUE) - 1
+                    if (s2 == 0) {
+                        visible(sideChk) <- enabled(sideChk) <- FALSE
+                        enabled(comButton) <- svalue(G1box, index = TRUE) == 1
+                    } else {
+                        visible(sideChk) <- enabled(sideChk) <- svalue(G1box, index = TRUE) > 1
+                        enabled(comButton) <- FALSE
+                    }
+                })
+
+
             ## summary button
             sumButton = gbutton("Summary", handler = function(h,...) {
-                s1 = svalue(box1, index = TRUE)
-                s2 = svalue(box2, index = TRUE)
+                s1 = svalue(G1box, index = TRUE)
+                s2 = svalue(G2box, index = TRUE)
                 if (s1 == 1) {
                     # summaryWindow(capture.output(summary(mroPara(mrObject))), mode = 1)
-                    txt = capture.output(summary(mroPara(mrObject)))
+                    txt = capture.output(summary(iNZightMR::mroPara(mrObject)))
                     summaryWindow(txt, mode = 1)
                 } else if (s1 != 1 & s2 == 1) {
                     txt = capture.output(summary(byMRObject, "within"))
@@ -202,13 +232,13 @@ iNZightMultiRes <- setRefClass(
                 }
             })
             enabled(sumButton) = FALSE
-            
+
             ## combinations
             comButton = gbutton("Combinations", handler = function(h,...) {
-                s1 = svalue(box1, index = TRUE)
-                s2 = svalue(box2, index = TRUE)
+                s1 = svalue(G1box, index = TRUE)
+                s2 = svalue(G2box, index = TRUE)
                 if (s1 == 1) {
-                    summaryWindow(capture.output(plotcombn(mrObject)), mode = 3)
+                    summaryWindow(capture.output(iNZightMR::plotcombn(mrObject)), mode = 3)
                 } else if (s1 != 1 & s2 == 1) {
                     gmessage("Not yet supported")
                 } else if (s1 != 1 & s2 != 1) {
@@ -216,7 +246,7 @@ iNZightMultiRes <- setRefClass(
                 }
             })
             enabled(comButton) = FALSE
-            
+
             ## back button
             back = gbutton("Back", handler = function(h,...) {
                 # tooltip = "Click to go back"
@@ -225,16 +255,16 @@ iNZightMultiRes <- setRefClass(
                 visible(GUI$gp1)          <<- TRUE
             })
             font(back) <- list(weight="bold", family="normal", color="navy")
-            
-            
+
+
             bot[1, 1, anchor = c(0,0), expand = TRUE] = sumButton
             bot[1, 2, anchor = c(0,0), expand = TRUE] = comButton
             bot[2, 1:2, anchor = c(0,0), expand = TRUE] = back
-            
-            
-            
+
+
+            visible(GUI$moduleWindow) <<- TRUE
         },
-        
+
         ## isBinary() checks for a single vector.
         isBinary = function(x) {
             ## NAs are ignored as they are handled by MR
@@ -256,19 +286,137 @@ iNZightMultiRes <- setRefClass(
         getVars = function(data) {
             which(apply(data, 2, function(x) isBinary(x)))
         },
+        createSlider = function(pos, dropdata) {
+            ## not working yet ...
+            return(NULL)
+            
+            ## make sure there is no slider at the pos
+            deleteSlider(pos)
+
+            ## create a ggroup for the slider at the specified
+            ## pos in the glayout
+            tbl <- mid
+            tbl[pos, 1:5, expand = TRUE] <- (hzGrp <- ggroup(fill = "x"))
+
+            sliderGrp <- ggroup(horizontal = FALSE)
+
+            ## build the level names that are used for the slider
+            grpData <- activeData[dropdata][[1]]
+            grpData <- iNZightPlots:::convert.to.factor(grpData)
+            if (pos == 2)
+                lev <- c("_MULTI", levels(grpData))
+            else
+                lev <- c("_ALL", levels(grpData), "_MULTI")
+            lev <- factor(lev, levels = lev)
+            slider <- gslider(from = lev,
+                              value = 1)
+            add(sliderGrp, slider, expand = FALSE)
+            if (pos == 2)
+                grp = "g1"
+            else
+                grp = "g2"
+            ## update the plot settings whenever the slider changes
+            addHandlerChanged(slider, handler = function(h, ...) {
+                                  lbl <- paste(grp, "level", sep = ".")
+                                  changePlotSettings(
+                                      structure(list(
+                                          as.character(svalue(h$obj))
+                                          ), .Names = lbl)
+                                      )
+                          })
+            lbl <- levels(grpData)
+            ## if the level names are too long, replace them with nr
+            if (sum(nchar(lbl)) > 42)
+                lbl <- 1:length(lbl)
+            ## add * or _ to beginning of labels
+            if (pos == 2)
+                lbl <- c("_MULTI", lbl)
+            else
+                lbl <- c("_ALL", lbl, "_MULTI")
+            ## only add label if it is short enough
+            if (sum(nchar(lbl)) + 3 * length(lbl) < 50)
+                add(sliderGrp, glabel(paste(lbl, collapse = "   ")))
+
+            ## Play button
+            ## playBtn <- gbutton("Play", expand = FALSE,
+            ##                 handler = function(h, ...) {
+            ##                     oldSet <- GUI$getActiveDoc()$getSettings()
+            ##                     for (i in 1:length(levels(grpData))) {
+            ##                         changePlotSettings(
+            ##                             structure(list(i),
+            ##                                       .Names = paste(
+            ##                                           grp,
+            ##                                           "level",
+            ##                                           sep = ".")
+            ##                                       )
+            ##                             )
+            ##                       # This effectively freezes the R session,
+            ##                       # and therefore iNZight --- so increase with
+            ##                       # discression!!!!!
+            ##                         Sys.sleep(0.6)
+            ##                     }
+            ##                     changePlotSettings(oldSet)
+            ##                 })
+            add(hzGrp, sliderGrp, expand = TRUE)
+
+            ## tbl[pos, 7, anchor = c(0, 0), expand = FALSE] <- playBtn
+
+        },
+        deleteSlider = function(pos) {
+            ## get the child that is at the specified positions
+            childPos <- which(sapply(mid$child_positions,
+                                     function(x) x$x == pos))
+            while(length(childPos) > 0) {
+                ##childPos <- names(ctrlGp$children[[1]]$child_positions)[[childPos]]
+                ## delete all the current children of sliderGrp
+                try({
+                    mid$remove_child(
+                        mid$child_positions[[childPos[1]]]$child)
+                    childPos <- which(sapply(mid$child_positions,
+                                             function(x) x$x == pos))
+                }, silent = TRUE)
+            }
+        },
+        changePlotSettings = function(set, reset = FALSE) {
+            plotSet <<- iNZight:::modifyList(plotSet, set, keep.null = FALSE)
+
+            setMRobj()
+        },
+        setMRobj = function() {
+            ## Get variables
+            responseID <- svalue(gtab, index = TRUE)
+            if (length(responseID) == 1) return(NULL)
+            
+            responseVars <- binaryVar[responseID]
+            
+            frm <- as.formula(paste(objName, "~", paste(vars[responseVars], collapse = " + ")))
+            mrObject <<- iNZightMR::iNZightMR(frm, data = activeData, Labels = substrsplit)
+            if (mrObject$Labels$Commonstr != objName && nchar(mrObject$Labels) > 0 && guessName) {
+                objName <<- mrObject$Labels$Commonstr
+                setMRobj()
+                return(NULL)
+            }
+                
+            updatePlot()
+        },
         ## create an MR object and plot it
-        updatePlot = function(obj) {
-            ## create an MR object
-            clicked   = svalue(obj, index = TRUE)
-            if (length(clicked) == 1) { return() }
-            selected  = binaryVar[clicked]
-            varPieces = paste(vars[selected], collapse = " + ")
-            MRformula = as.formula(paste("mrobj", "~", varPieces))
-            mrObject <<- iNZightMR(MRformula, data = activeData, Labels = substrsplit)
-            mro       = mroPara(mrObject)
-            # mro$Topic: change this or not?
-            ## plot the MR object
-            barplotMR(mro)
+        updatePlot = function() {
+            
+            if (is.null(plotSet$g1)) {
+                mro <- iNZightMR::mroPara(mrObject)
+            } else if (is.null(plotSet$g2)) {
+                by.formula = paste("~", plotSet$g1)
+                mro <- byMRObject <<- iNZightMR::byMRO(mrObject, by.formula, mroPara)
+            } else {
+                by.formula = paste("~", paste(plotSet$g1, "+", plotSet$g2))
+                mro <- byMRObject <<- iNZightMR::byMRO(mrObject, by.formula, mroPara)
+                if (!is.null(plotSet$sidebyside))
+                    if (plotSet$sidebyside)
+                        mro <- iNZightMR::between(mro)
+            }
+
+            iNZightMR::barplotMR(mro)
+            
         },
         ## summary window
         summaryWindow = function(text, mode) {
