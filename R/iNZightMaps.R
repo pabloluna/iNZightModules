@@ -180,9 +180,41 @@ iNZightMapMod <- setRefClass(
 
 
             ## Reconfigure the Plot Toolbar:
-            zoomBtn <- gimage(stock.id = "zoom-in", size = "button")
-            addHandlerClicked(zoomBtn, function(h, ...) gmessage("HA!"))
-            GUI$plotToolbar$update(NULL, refresh = "updatePlot", extra = list(zoomBtn))
+            aboutBtn <- gimage(stock.id = "about", size = "button")
+            addHandlerClicked(aboutBtn, function(h, ...) {
+
+                                  wAb <- gwindow(width = 400, height = 370,
+                                  #w <- gwindow(parent = GUI$win, height = 300, width = 400,
+                                               title = "iNZight Maps Module")
+
+                                  gAb <- gvbox(container = wAb, spacing = 10)
+                                  addSpace(gAb, 10)
+                                  labAb <- glabel("About the iNZight Maps Module")
+                                  font(labAb) <- list(weight = "bold", size = 12)
+                                  add(gAb, labAb, anchor = c(0, 0))
+
+                                  aboutText <-
+                                      paste("\n\nThe iNZight Mapping Module allows you to visually explore geographical",
+                                            "data. When you load the module, you are presented with a window to select",
+                                            "the Latitude and Longitude variables from the data set.",
+                                            "\n\nOnce you've specified the locations of points, they are displayed on a map",
+                                            "automatically. Using the drop downs, you can code variables and investigate",
+                                            "any geographical patterns.",
+                                            "\n\nThe Maps module is new, and we have more features on the way, including",
+                                            "displaying regional data (such as for countries, states, provinces,",
+                                            "etc) on maps. Also feel free to send us any suggestions or problems",
+                                            "you come across:\n\n",
+                                            "    https://stat.auckland.ac.nz/~wild/iNZight/support/contact")
+                                  txtAb <- gtext(text = aboutText, width = 380, height = NULL)
+                                  add(gAb, txtAb, expand = TRUE)
+
+                                  #addSpring(gAb)
+
+                                  cls <- gbutton("Close", handler = function(h, ...) dispose(wAb))
+                                  add(gAb, cls, anchor = c(0, 1))
+
+                              })
+            GUI$plotToolbar$update(NULL, refresh = "updatePlot", extra = list(aboutBtn))
 
             ## mainGrp
             mainGrp <<- gvbox(spacing = 10, container = GUI$moduleWindow, expand = TRUE)
