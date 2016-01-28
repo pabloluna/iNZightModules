@@ -32,7 +32,8 @@ iNZightMultiRes <- setRefClass(
     methods = list(
         initialize = function(GUI) {
             
-            initFields(GUI = GUI, plotSet = list(), objName = "response", guessName = TRUE)
+            initFields(GUI = GUI, plotSet = list(), objName = "response", guessName = TRUE,
+                       mrObject = NULL)
             activeData <<- GUI$getActiveData()
             
 
@@ -47,10 +48,57 @@ iNZightMultiRes <- setRefClass(
                     icon = "error", title = "No Binary Variables", parent = GUI$win)
                 return(NULL)
             }
-
-            GUI$initializeModuleWindow()
+            
+            
+            GUI$initializeModuleWindow(.self)
             mainGrp <<- gvbox(spacing = 10, container = GUI$moduleWindow, expand = TRUE)
             mainGrp$set_borderwidth(5)
+            
+            ## --- Plot Toolbar
+            aboutBtn <- gimage(stock.id = "about", size = "button")
+            addHandlerClicked(aboutBtn, function(h, ...) {
+
+                                  wAb <- gwindow(parent = GUI$win, width = 400, height = 480,
+                                                 title = "iNZight Maps Module")
+
+                                  gAb <- gvbox(container = wAb, spacing = 10)
+                                  addSpace(gAb, 10)
+                                  labAb <- glabel("About the iNZight Maps Module")
+                                  font(labAb) <- list(weight = "bold", size = 12)
+                                  add(gAb, labAb, anchor = c(0, 0))
+
+                                  aboutText <-
+                                      paste("\n\nThe iNZight Multiple Response module allows you to explore data",
+                                            "from questions in which respondents can select multiple answers a single",
+                                            "question. For example: 'What colours do you like?', and a range of colours",
+                                            "are present (for example as checkboxes) to select.",
+                                            "\n\nThe data will then be in a form with a column for each option of the question,",
+                                            "for example: 'colourred', 'colourblue', 'colourgree', etc.",
+                                            "The data is therefore of the form 'yes' or 'no', or in mathematical terms,",
+                                            "0 or 1.",
+                                            "\n\nThe iNZight Multiple Response module allows you to select related variables ",
+                                            "(i.e., all of the 'colour' variables) and investigate the proportion of 'yes's.",
+                                            "You can select grouping variables to see how the responses are affected by",
+                                            "other covariates, for example gender or age.",
+                                            "\n\nThis module is fairly new, and so there may be some issues with it that",
+                                            "we aren't aware of. Please report these to us so we can solve them:\n")
+                                  txtAb <- gtext(text = aboutText, width = 380, height = NULL)
+                                  add(gAb, txtAb, expand = TRUE)
+                                  
+                                  lab <- gbutton("Contact iNZight Support")
+                                  font(lab) <- list(color = "navy", weight = "bold")
+                                  addHandlerClicked(lab, function(h, ...)
+                                      browseURL("https://stat.auckland.ac.nz/~wild/iNZight/support/contact"))
+                                  add(gAb, lab, expand = FALSE, fill = FALSE, anchor = c(0, 0))
+
+
+                                  cls <- gbutton("Close", handler = function(h, ...) dispose(wAb))
+                                  add(gAb, cls, anchor = c(0, 1))
+
+                              })
+            GUI$plotToolbar$update(NULL, refresh = "updatePlot", extra = list(aboutBtn))
+
+            addSpace(mainGrp, 15)
 
             lbl1 <- glabel("Multiple Response Module")
             font(lbl1) <- list(weight = "bold",
@@ -59,11 +107,10 @@ iNZightMultiRes <- setRefClass(
             add(mainGrp, lbl1, anchor = c(0, 0))
             addSpace(mainGrp, 20)
 
-            mainGrp$set_borderwidth(2)
             top <- gvbox(container = mainGrp)
             mid <<- glayout(container = mainGrp, expand = FALSE)
             addSpring(mainGrp)
-            bot <- glayout(container = mainGrp, expand = FALSE)
+            bot <- ggroup(container = mainGrp)
             
             lab <- glabel("Select related variables:")
             font(lab) <- list(weight = "bold", size = 11)
@@ -73,13 +120,14 @@ iNZightMultiRes <- setRefClass(
             vars <<- names(activeData)
             gtab <<- gtable(vars[binaryVar], multiple = TRUE, container = top)
             names(gtab) <<- "VARIABLES"
-            size(gtab)  <<- c(280, 280)
+            size(gtab)  <<- c(-1, 350)
 
-            top.timer = NULL
-            addHandlerClicked(gtab, handler = function(h, ...) {
+            top.timer <- NULL
+            ## For some reason this is firing off twice when selection changes before timer ends ...
+            addHandlerSelectionChanged(gtab, handler = function(h, ...) {
                 if (!is.null(top.timer))
                     top.timer$stop_timer()
-                top.timer = gtimer(500, function(...) {
+                top.timer <- gtimer(500, function(...) {
                     if (length(svalue(gtab)) >= 2) {
                         visible(G1clearbtn) <- visible(G1box) <- enabled(G1box) <- TRUE
                         visible(G2clearbtn) <- visible(G2box) <- enabled(G2box) <- svalue(G1box, index = TRUE) != 1
@@ -87,11 +135,55 @@ iNZightMultiRes <- setRefClass(
                         enabled(comButton) = TRUE
 
                         setMRobj()
+                    } else {
+                        visible(G1clearbtn) <- visible(G1box) <- enabled(G1box) <- FALSE
+                        visible(G2clearbtn) <- visible(G2box) <- enabled(G2box) <- FALSE
+                        enabled(sumButton) = FALSE
+                        enabled(comButton) = FALSE
+
+                        setMRobj()
                     }
                 }, one.shot = TRUE)
             })
 
+            
+            ## summary button
+            sumButton = gbutton("Summary", handler = function(h,...) {
+                s1 = svalue(G1box, index = TRUE)
+                s2 = svalue(G2box, index = TRUE)
+                if (s1 == 1) {
+                    # summaryWindow(capture.output(summary(mroPara(mrObject))), mode = 1)
+                    txt = capture.output(summary(iNZightMR::mroPara(mrObject)))
+                    summaryWindow(txt, mode = 1)
+                } else if (s1 != 1 & s2 == 1) {
+                    txt = capture.output(summary(byMRObject, "within"))
+                    summaryWindow(txt, mode = 2)
+                } else if (s1 != 1 & s2 != 1) {
+                    txt = capture.output(summary(byMRObject, "between"))
+                    summaryWindow(txt, mode = 3)
+                }
+            })
+            enabled(sumButton) = FALSE
 
+            ## combinations
+            comButton = gbutton("Combinations", handler = function(h,...) {
+                s1 = svalue(G1box, index = TRUE)
+                s2 = svalue(G2box, index = TRUE)
+                if (s1 == 1) {
+                    summaryWindow(capture.output(iNZightMR::plotcombn(mrObject)), mode = 3)
+                } else if (s1 != 1 & s2 == 1) {
+                    gmessage("Not yet supported")
+                } else if (s1 != 1 & s2 != 1) {
+                    gmessage("Not yet supported")
+                }
+            })
+            enabled(comButton) = FALSE
+            
+            btnGrp <- ggroup(container = top)
+            add(btnGrp, sumButton, expand = TRUE, fill = TRUE)
+            add(btnGrp, comButton, expand = TRUE, fill = TRUE)
+
+            
             # =============
             # mid panel
             # =============
@@ -215,54 +307,29 @@ iNZightMultiRes <- setRefClass(
                 })
 
 
-            ## summary button
-            sumButton = gbutton("Summary", handler = function(h,...) {
-                s1 = svalue(G1box, index = TRUE)
-                s2 = svalue(G2box, index = TRUE)
-                if (s1 == 1) {
-                    # summaryWindow(capture.output(summary(mroPara(mrObject))), mode = 1)
-                    txt = capture.output(summary(iNZightMR::mroPara(mrObject)))
-                    summaryWindow(txt, mode = 1)
-                } else if (s1 != 1 & s2 == 1) {
-                    txt = capture.output(summary(byMRObject, "within"))
-                    summaryWindow(txt, mode = 2)
-                } else if (s1 != 1 & s2 != 1) {
-                    txt = capture.output(summary(byMRObject, "between"))
-                    summaryWindow(txt, mode = 3)
-                }
-            })
-            enabled(sumButton) = FALSE
-
-            ## combinations
-            comButton = gbutton("Combinations", handler = function(h,...) {
-                s1 = svalue(G1box, index = TRUE)
-                s2 = svalue(G2box, index = TRUE)
-                if (s1 == 1) {
-                    summaryWindow(capture.output(iNZightMR::plotcombn(mrObject)), mode = 3)
-                } else if (s1 != 1 & s2 == 1) {
-                    gmessage("Not yet supported")
-                } else if (s1 != 1 & s2 != 1) {
-                    gmessage("Not yet supported")
-                }
-            })
-            enabled(comButton) = FALSE
-
-            ## back button
-            back = gbutton("Back", handler = function(h,...) {
-                # tooltip = "Click to go back"
-                # icon = "gtk-go-back",
-                visible(GUI$moduleWindow) <<- FALSE
-                visible(GUI$gp1)          <<- TRUE
-            })
-            font(back) <- list(weight="bold", family="normal", color="navy")
+            ## --- Buttons at bottom of window - SUMMARY | COMBINATIONS || HELP | HOME
+            
 
 
-            bot[1, 1, anchor = c(0,0), expand = TRUE] = sumButton
-            bot[1, 2, anchor = c(0,0), expand = TRUE] = comButton
-            bot[2, 1:2, anchor = c(0,0), expand = TRUE] = back
-
+            helpButton <- gbutton("Help", 
+                                  handler = function(h, ...) {
+                                      browseURL("https://www.stat.auckland.ac.nz/~wild/iNZight/user_guides/add_ons/?topic=multiple_response")
+                                  })
+            homeButton <- gbutton("Home", 
+                                handler = function(h, ...) {
+                                    ## delete the module window
+                                    delete(GUI$leftMain, GUI$leftMain$children[[2]])
+                                    ## display the default view (data, variable, etc.)
+                                    GUI$plotToolbar$restore()
+                                    visible(GUI$gp1) <<- TRUE
+                                })        
+            
+            add(bot, helpButton, expand = TRUE, fill = TRUE)
+            add(bot, homeButton, expand = TRUE, fill = TRUE)
+            
 
             visible(GUI$moduleWindow) <<- TRUE
+
         },
 
         ## isBinary() checks for a single vector.
@@ -385,22 +452,32 @@ iNZightMultiRes <- setRefClass(
         setMRobj = function() {
             ## Get variables
             responseID <- svalue(gtab, index = TRUE)
-            if (length(responseID) == 1) return(NULL)
+            if (length(responseID) == 1) {
+                mrObject <<- NULL
+                updatePlot()
+                
+                return(NULL)
+            }
             
             responseVars <- binaryVar[responseID]
-            
+
             frm <- as.formula(paste(objName, "~", paste(vars[responseVars], collapse = " + ")))
+            
             mrObject <<- iNZightMR::iNZightMR(frm, data = activeData, Labels = substrsplit)
-            if (mrObject$Labels$Commonstr != objName && nchar(mrObject$Labels) > 0 && guessName) {
-                objName <<- mrObject$Labels$Commonstr
-                setMRobj()
-                return(NULL)
+            if (mrObject$Labels$Commonstr != objName && guessName) {
+                if (!(objName == "response" && mrObject$Labels$Commonstr == "")) {
+                    objName <<- ifelse(mrObject$Labels$Commonstr == "", "response", mrObject$Labels$Commonstr)
+                    setMRobj()
+                    return(NULL)
+                }
             }
                 
             updatePlot()
         },
         ## create an MR object and plot it
         updatePlot = function() {
+
+            if (is.null(mrObject)) return(NULL)
             
             if (is.null(plotSet$g1)) {
                 mro <- iNZightMR::mroPara(mrObject)

@@ -145,10 +145,6 @@ iNZightMapMod <- setRefClass(
             visible(w) <- TRUE
 
 
-
-
-
-
         },
 
         ## Supplementary functions to be used in initialize()
@@ -176,16 +172,15 @@ iNZightMapMod <- setRefClass(
         },
         ## initiate the module only when the data has been set
         initiateModule = function() {
-            GUI$initializeModuleWindow()
+            GUI$initializeModuleWindow(.self)
 
 
             ## Reconfigure the Plot Toolbar:
             aboutBtn <- gimage(stock.id = "about", size = "button")
             addHandlerClicked(aboutBtn, function(h, ...) {
 
-                                  wAb <- gwindow(width = 400, height = 370,
-                                  #w <- gwindow(parent = GUI$win, height = 300, width = 400,
-                                               title = "iNZight Maps Module")
+                                  wAb <- gwindow(parent = GUI$win, width = 400, height = 370,
+                                                 title = "iNZight Maps Module")
 
                                   gAb <- gvbox(container = wAb, spacing = 10)
                                   addSpace(gAb, 10)
@@ -203,12 +198,15 @@ iNZightMapMod <- setRefClass(
                                             "\n\nThe Maps module is new, and we have more features on the way, including",
                                             "displaying regional data (such as for countries, states, provinces,",
                                             "etc) on maps. Also feel free to send us any suggestions or problems",
-                                            "you come across:\n\n",
-                                            "    https://stat.auckland.ac.nz/~wild/iNZight/support/contact")
+                                            "you come across:\n")
                                   txtAb <- gtext(text = aboutText, width = 380, height = NULL)
                                   add(gAb, txtAb, expand = TRUE)
 
-                                  #addSpring(gAb)
+                                  lab <- gbutton("Contact iNZight Support")
+                                  font(lab) <- list(color = "navy", weight = "bold")
+                                  addHandlerClicked(lab, function(h, ...)
+                                      browseURL("https://stat.auckland.ac.nz/~wild/iNZight/support/contact"))
+                                  add(gAb, lab, expand = FALSE, fill = FALSE, anchor = c(0, 0))
 
                                   cls <- gbutton("Close", handler = function(h, ...) dispose(wAb))
                                   add(gAb, cls, anchor = c(0, 1))
@@ -486,14 +484,14 @@ iNZightMapMod <- setRefClass(
             ## close buton
 
 
-            btmGrp <- ggroup(cont = mainGrp)
+            btmGrp <- ggroup(container = mainGrp)
 
             helpButton <- gbutton("Help", expand = TRUE, fill = TRUE,
                                   cont = btmGrp,
                                   handler = function(h, ...) {
                                       browseURL("https://www.stat.auckland.ac.nz/~wild/iNZight/user_guides/add_ons/?topic=maps")
                                   })
-            okButton <- gbutton("Back", expand = TRUE, fill = TRUE,
+            homeButton <- gbutton("Home", expand = TRUE, fill = TRUE,
                                 cont = btmGrp,
                                 handler = function(h, ...) {
                                     ## delete the module window
