@@ -65,20 +65,8 @@ iNZightMapMod <- setRefClass(
                     return(NULL)
                 }
             }
-
-            ## Temporary until iNZightMaps is on the docker repository
-            if (!"maptools" %in% rownames(installed.packages()))
-                utils::install.packages("maptools", repos = "http://cran.stat.auckland.ac.nz")
-            if (!requireNamespace("maptools")) gmessage("Please install `maptools`.")
-
-            if (!"RgoogleMaps" %in% rownames(installed.packages()))
-                utils::install.packages("RgoogleMaps", repos = "http://cran.stat.auckland.ac.nz")
-            if (!requireNamespace("RgoogleMaps")) gmessage("Please install `RgoogleMaps`.")
-
-            if (!"RColorBrewer" %in% rownames(installed.packages()))
-                utils::install.packages("RColorBrewer", repos = "http://cran.stat.auckland.ac.nz")
-            if (!requireNamespace("RColorBrewer")) gmessage("Please install `RColorBrewer`.")
-
+            
+            
             ## Configure the data / variables for mapping:
             ## activeData
             activeData <<- GUI$getActiveData()
