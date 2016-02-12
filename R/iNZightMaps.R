@@ -75,25 +75,36 @@ iNZightMapMod <- setRefClass(
             gv <- gvbox(cont = w, expand = TRUE, fill = TRUE)
             gv$set_borderwidth(15)
 
+
+            lbl <- glabel("Type of Map Data")
+            font(lbl) <- list(weight = "bold", size = 12, family = "normal")
+            mapType <- gradio(c("Coordinate (latitude, longitude)",
+                                "Regions (country, state, county, etc.)"))
+            add(gv, lbl)
+            add(gv, mapType)
+
+            addSpace(gv, 10)
+
+
             title <- glabel("Mapping Variables")
             font(title) <- list(weight = "bold", size = 12, family = "normal")
             add(gv, title, anchor = c(-1, 0))
 
 
             ## latitude and longitude
-            tbl <- glayout()
+            tbl <- glayout(homogeneous = FALSE)
             ii <- 1
 
             lbl <- "Latitude :"
             latVar <- gcombobox(c("", numericVars()))
             tbl[ii, 1, anchor = c(1, 0), expand = TRUE] <- lbl
-            tbl[ii, 2, anchor = c(-1, 0), expand = TRUE] <- latVar
+            tbl[ii, 2:4, anchor = c(-1, 0), expand = TRUE] <- latVar
             ii <- ii + 1
 
             lbl <- "Longitude :"
             lonVar <- gcombobox(c("", numericVars()))
             tbl[ii, 1, anchor = c(1, 0), expand = TRUE] <- lbl
-            tbl[ii, 2, anchor = c(-1, 0), expand = TRUE] <- lonVar
+            tbl[ii, 2:4, anchor = c(-1, 0), expand = TRUE] <- lonVar
             ii <- ii + 1
 
             ## try find lat/lon columns in data set:
@@ -104,9 +115,35 @@ iNZightMapMod <- setRefClass(
             if (length(lon.match)) svalue(lonVar, index = TRUE) <- lon.match[1] + 1
 
 
+            ## shape file and region variable
+            tbl2 <- glayout(homogeneous = FALSE)
+            ii <- 1
+
+            lbl <- "Map Location :"
+            mapLoc <- gcombobox(c("", "world"))
+            tbl2[ii, 1, anchor = c(1, 0), expand = TRUE] <- lbl
+            tbl2[ii, 2:4, anchor = c(-1, 0), expand = TRUE] <- mapLoc
+            ii <- ii + 1
+
+            lbl <- "Location Variable :"
+            locVar <- gcombobox(c("", characterVars()))
+            tbl2[ii, 1, anchor = c(1, 0), expand = TRUE] <- lbl
+            tbl2[ii, 2:4, anchor = c(-1, 0), expand = TRUE] <- locVar
+            ii <- ii + 1
+            
+            visible(tbl2) <- FALSE
+
             addSpace(gv, 10)
             add(gv, tbl, expand = TRUE, fill = TRUE)
+            add(gv, tbl2, expand = TRUE, fill = TRUE)
             addSpring(gv)
+
+            ## switch between them using radio buttons
+            addHandlerChanged(mapType, function(h, ...) {
+                                  v <- svalue(mapType, index = TRUE)
+                                  visible(tbl) <- v == 1
+                                  visible(tbl2) <- v == 2
+                              })
 
             ## OK Button
             btnGrp <- ggroup(cont = gv)
@@ -115,13 +152,26 @@ iNZightMapMod <- setRefClass(
             okbtn <- gbutton("OK", expand = TRUE,
                              cont = btnGrp,
                              handler = function(h, ...) {
-                                 if (svalue(latVar, TRUE) > 1 && svalue(lonVar, TRUE) > 1) {
-                                     setVars(list(latitude = svalue(latVar),
-                                                  longitude = svalue(lonVar)))
-                                     initiateModule()
-                                     dispose(w)
+                                 if (svalue(mapType, index = TRUE) == 1) {
+                                     if (svalue(latVar, TRUE) > 1 && svalue(lonVar, TRUE) > 1) {
+                                         setVars(list(latitude = svalue(latVar),
+                                                      longitude = svalue(lonVar)),
+                                                 type = "points")
+                                         initiateModule()
+                                         dispose(w)
+                                     } else {
+                                         gmessage("Please select a variable for latitude and longitude")
+                                     }
                                  } else {
-                                     gmessage("Please select a variable for latitude and longitude")
+                                     if (svalue(mapLoc, TRUE) > 1 && svalue(locVar, TRUE) > 1) {
+                                         setVars(list(location = svalue(mapLoc),
+                                                      location.var = svalue(locVar)),
+                                                 type = "shape")
+                                         initiateModule(shape = TRUE)
+                                         dispose(w)
+                                     } else {
+                                         gmessage("Please select a map location and variable")
+                                     }
                                  }
                              })
             cnclBtn <- gbutton("Cancel", expand = TRUE, cont = btnGrp,
@@ -137,9 +187,9 @@ iNZightMapMod <- setRefClass(
 
         ## Supplementary functions to be used in initialize()
         ##   - Can create as many as needed
-        setVars = function(names) {
+        setVars = function(names, type) {
             map.vars <<- names
-            map.type <<- "roadmap"
+            map.type <<- ifelse(type == "shape", "shape", "roadmap")
 
             ## defaults:
             map.vars$alpha <<- 1
@@ -149,19 +199,28 @@ iNZightMapMod <- setRefClass(
             createMapObject()
         },
         createMapObject = function() {
-            map.object <<- iNZightMaps::iNZightMap(lat = eval(parse(text = paste("~", map.vars$latitude))),
-                                      lon = eval(parse(text = paste("~", map.vars$longitude))),
-                                      data = activeData,
-                                      name = GUI$dataNameWidget$datName)
+            map.object <<-
+                if (map.type == "shape") {
+                    iNZightMaps::iNZightShapeMap(data = activeData,
+                                                location = map.vars$location,
+                                                data.region = map.vars$location.var)
+                } else {
+                    iNZightMaps::iNZightMap(lat = eval(parse(text = paste("~", map.vars$latitude))),
+                                            lon = eval(parse(text = paste("~", map.vars$longitude))),
+                                            data = activeData,
+                                            name = GUI$dataNameWidget$datName)
+                }
         },
         ## get only numeric type variables
         numericVars = function() {
             colnames(activeData)[sapply(activeData, is.numeric)]
         },
+        characterVars = function() {
+            colnames(activeData)[!sapply(activeData, is.numeric)]
+        },
         ## initiate the module only when the data has been set
-        initiateModule = function() {
+        initiateModule = function(shape = FALSE) {
             GUI$initializeModuleWindow(.self)
-
 
             ## Reconfigure the Plot Toolbar:
             aboutBtn <- gimage(stock.id = "about", size = "button")
@@ -219,63 +278,75 @@ iNZightMapMod <- setRefClass(
             tbl <- glayout()
             ii <- 1
 
-            lbl <- glabel("Code Variables")
-            font(lbl) <- list(weight = "bold", size = 11)
-            tbl[ii, 1:2, anchor = c(-1, -1), expand = TRUE] <- lbl
-            ii <- ii + 1
-
-            lbl <- glabel("Colour by :")
-            colVarList <- gcombobox(c("", names(GUI$getActiveData())),
-                                    selected = ifelse(
-                                        is.null(map.vars$colby),
-                                        1, which(names(GUI$getActiveData()) ==
-                                                     map.vars$colby)[1] + 1
+            if (map.type == "shape") {
+                yVarList <- gcombobox(
+                    c("Select Variable", rszNames <- names(activeData)[sapply(activeData, is.numeric)]),
+                    selected = ifelse(
+                        is.null(map.vars$y),
+                        1, which(rszNames == map.vars$y)[1] + 1
+                        )
+                    )
+                tbl[ii, 1:2, expand = TRUE] <- yVarList
+                ii <- ii + 1
+            } else {
+                lbl <- glabel("Code Variables")
+                font(lbl) <- list(weight = "bold", size = 11)
+                tbl[ii, 1:2, anchor = c(-1, -1), expand = TRUE] <- lbl
+                ii <- ii + 1
+                
+                lbl <- glabel("Colour by :")
+                colVarList <- gcombobox(c("", names(GUI$getActiveData())),
+                                        selected = ifelse(
+                                            is.null(map.vars$colby),
+                                            1, which(names(GUI$getActiveData()) ==
+                                                         map.vars$colby)[1] + 1
+                                            )
                                         )
-                                    )
-            tbl[ii, 1, anchor = c(1, 0), expand = TRUE] <- lbl
-            tbl[ii, 2, expand = TRUE] <- colVarList
-            ii <- ii + 1
-
-            ## lvlCols <- gbutton("Specify colours")
-            ## tbl[ii, 2, expand = TRUE] <- lvlCols
-            ## visible(lvlCols) <- svalue(grpVarList, index = TRUE) != 1
-            ## ii <- ii + 1
-
-            ## addHandlerClicked(lvlCols, function(h, ...) {
-            ##                       variable <- GUI$getActiveData()[, svalue(grpVarList, index = FALSE)]
-            ##                       if (is.numeric(variable)) {
-            ##                           gmessage("Set colour of numeric ... not yet implemented.", "Not ready yet.", icon = "warning")
-            ##                       } else {
-            ##                           specifyColours(variable)
-            ##                       }
-            ##                   })
-
-
-            lbl <- glabel("Size by :")
-            rszVarList <- gcombobox(
-                c("", rszNames <- names(activeData)[sapply(activeData, is.numeric)]),
-                selected = ifelse(
-                    is.null(map.vars$sizeby),
-                    1, which(rszNames == map.vars$sizeby)[1] + 1
+                tbl[ii, 1, anchor = c(1, 0), expand = TRUE] <- lbl
+                tbl[ii, 2, expand = TRUE] <- colVarList
+                ii <- ii + 1
+                
+                ## lvlCols <- gbutton("Specify colours")
+                ## tbl[ii, 2, expand = TRUE] <- lvlCols
+                ## visible(lvlCols) <- svalue(grpVarList, index = TRUE) != 1
+                ## ii <- ii + 1
+                
+                ## addHandlerClicked(lvlCols, function(h, ...) {
+                ##                       variable <- GUI$getActiveData()[, svalue(grpVarList, index = FALSE)]
+                ##                       if (is.numeric(variable)) {
+                ##                           gmessage("Set colour of numeric ... not yet implemented.", "Not ready yet.", icon = "warning")
+                ##                       } else {
+                ##                           specifyColours(variable)
+                ##                       }
+                ##                   })
+                
+                
+                lbl <- glabel("Size by :")
+                rszVarList <- gcombobox(
+                    c("", rszNames <- names(activeData)[sapply(activeData, is.numeric)]),
+                    selected = ifelse(
+                        is.null(map.vars$sizeby),
+                        1, which(rszNames == map.vars$sizeby)[1] + 1
+                        )
                     )
-                )
-            tbl[ii, 1, anchor = c(1, 0), expand = TRUE] <- lbl
-            tbl[ii, 2, expand = TRUE] <- rszVarList
-            ii <- ii + 1
-
-
-            lbl <- glabel("Opacify by :")
-            opctyVarList <- gcombobox(
-                c("", numNames <- names(activeData)[sapply(activeData, is.numeric)]),
-                selected = ifelse(
-                    is.null(map.vars$opacity),
-                    1, which(numNames == map.vars$opacity)[1] + 1
+                tbl[ii, 1, anchor = c(1, 0), expand = TRUE] <- lbl
+                tbl[ii, 2, expand = TRUE] <- rszVarList
+                ii <- ii + 1
+                
+                
+                lbl <- glabel("Opacify by :")
+                opctyVarList <- gcombobox(
+                    c("", numNames <- names(activeData)[sapply(activeData, is.numeric)]),
+                    selected = ifelse(
+                        is.null(map.vars$opacity),
+                        1, which(numNames == map.vars$opacity)[1] + 1
+                        )
                     )
-                )
-            tbl[ii, 1, anchor = c(1, 0), expand = TRUE] <- lbl
-            tbl[ii, 2, expand = TRUE] <- opctyVarList
-            ii <- ii + 1
-
+                tbl[ii, 1, anchor = c(1, 0), expand = TRUE] <- lbl
+                tbl[ii, 2, expand = TRUE] <- opctyVarList
+                ii <- ii + 1
+            }
+            
             ii <- ii + 1
             ii <- ii + 1
             lbl <- glabel("Plot Options")
@@ -283,13 +354,15 @@ iNZightMapMod <- setRefClass(
             tbl[ii, 1:2, anchor = c(-1, -1), expand = TRUE] <- lbl
             ii <- ii + 1
 
-
-            lbl <- glabel("Map type :")
-            typeOpts <- c("roadmap", "satellite", "terrain", "hybrid")
-            typeList <- gcombobox(typeOpts)
-            tbl[ii, 1, anchor = c(1, 0), expand = TRUE] <- lbl
-            tbl[ii, 2, expand = TRUE] <- typeList
-            ii <- ii + 1
+            
+            if (map.type != "shape") {
+                lbl <- glabel("Map type :")
+                typeOpts <- c("roadmap", "satellite", "terrain", "hybrid")
+                typeList <- gcombobox(typeOpts)
+                tbl[ii, 1, anchor = c(1, 0), expand = TRUE] <- lbl
+                tbl[ii, 2, expand = TRUE] <- typeList
+                ii <- ii + 1
+            }
 
 
             ## COLOUR
@@ -310,45 +383,56 @@ iNZightMapMod <- setRefClass(
             ii <- ii + 1
 
 
-            ## Point sizes
-            lbl <- glabel("Point size :")
-            cexSlider <- gslider(from = 0.05, to = 3.5,
-                                 by = 0.05, value = map.vars$cex.pt)
-            tbl[ii, 1, anchor = c(1, 0), expand = TRUE] <- lbl
-            tbl[ii, 2, expand = TRUE] <- cexSlider
-            ii <- ii + 1
-
-            ## Transparency
-            lbl <- glabel("Transparency :")
-            transpSlider <- gslider(from = 0, to = 100,
-                                    by = 1, value = 100 * (1 - map.vars$alpha))
-            tbl[ii, 1, anchor = c(1, 0), expand = TRUE] <- lbl
-            tbl[ii, 2, expand = TRUE] <- transpSlider
-            ii <- ii + 1
+            if (map.type != "shape") {
+                ## Point sizes
+                lbl <- glabel("Point size :")
+                cexSlider <- gslider(from = 0.05, to = 3.5,
+                                     by = 0.05, value = map.vars$cex.pt)
+                tbl[ii, 1, anchor = c(1, 0), expand = TRUE] <- lbl
+                tbl[ii, 2, expand = TRUE] <- cexSlider
+                ii <- ii + 1
+                
+                ## Transparency
+                lbl <- glabel("Transparency :")
+                transpSlider <- gslider(from = 0, to = 100,
+                                        by = 1, value = 100 * (1 - map.vars$alpha))
+                tbl[ii, 1, anchor = c(1, 0), expand = TRUE] <- lbl
+                tbl[ii, 2, expand = TRUE] <- transpSlider
+                ii <- ii + 1
+            }
 
 
 
 
             ## Maintain a single function that is called whenever anything is updated:
             updateEverything <- function() {
-                if (svalue(colVarList, TRUE) > 1) map.vars$colby <<- svalue(colVarList) else map.vars$colby <<- NULL
-                if (svalue(rszVarList, TRUE) > 1) map.vars$sizeby <<- svalue(rszVarList) else map.vars$sizeby <<- NULL
-                if (svalue(opctyVarList, TRUE) > 1) map.vars$opacity <<- svalue(opctyVarList) else map.vars$opacity <<- NULL
-
-                map.vars$col.pt <<- svalue(symbolColList)
-                map.vars$cex.pt <<- svalue(cexSlider)
-                map.vars$alpha <<- 1 - svalue(transpSlider) / 100
-
-                map.type <<- svalue(typeList)
+                if (map.type == "shape") {
+                    map.vars$y <<- svalue(yVarList)
+                    map.vars$col <<- svalue(symbolColList)
+                } else {
+                    if (svalue(colVarList, TRUE) > 1) map.vars$colby <<- svalue(colVarList) else map.vars$colby <<- NULL
+                    if (svalue(rszVarList, TRUE) > 1) map.vars$sizeby <<- svalue(rszVarList) else map.vars$sizeby <<- NULL
+                    if (svalue(opctyVarList, TRUE) > 1) map.vars$opacity <<- svalue(opctyVarList) else map.vars$opacity <<- NULL
+                    
+                    map.vars$col.pt <<- svalue(symbolColList)
+                    map.vars$cex.pt <<- svalue(cexSlider)
+                    map.vars$alpha <<- 1 - svalue(transpSlider) / 100
+                    
+                    map.type <<- svalue(typeList)
+                }
 
                 updatePlot()
             }
 
             ## in this case, no point in having a separate "show" button
-            addHandlerChanged(colVarList, handler = function(h, ...) updateEverything())
-            addHandlerChanged(rszVarList, handler = function(h, ...) updateEverything())
-            addHandlerChanged(opctyVarList, handler = function(h, ...) updateEverything())
-            addHandlerChanged(typeList, handler = function(h, ...) updateEverything())
+            if (map.type == "shape") {
+                addHandlerChanged(yVarList, handler = function(h, ...) updateEverything())
+            } else {
+                addHandlerChanged(colVarList, handler = function(h, ...) updateEverything())
+                addHandlerChanged(rszVarList, handler = function(h, ...) updateEverything())
+                addHandlerChanged(opctyVarList, handler = function(h, ...) updateEverything())
+                addHandlerChanged(typeList, handler = function(h, ...) updateEverything())
+            }
 
             pcoltimer <- NULL
             addHandlerChanged(symbolColList,
@@ -361,25 +445,27 @@ iNZightMapMod <- setRefClass(
                                                       }, one.shot = TRUE)
                               })
 
-            cextimer <- NULL
-            addHandlerChanged(cexSlider,
-                              handler = function(h, ...) {
-                                  if (!is.null(cextimer))
-                                      cextimer$stop_timer()
-                                  cextimer <- gtimer(500, function(...) updateEverything(), one.shot = TRUE)
-                              })
+            if (map.type != "shape") {
+                cextimer <- NULL
+                addHandlerChanged(cexSlider,
+                                  handler = function(h, ...) {
+                                      if (!is.null(cextimer))
+                                          cextimer$stop_timer()
+                                      cextimer <- gtimer(500, function(...) updateEverything(), one.shot = TRUE)
+                                  })
+                
+                transptimer <- NULL
+                addHandlerChanged(transpSlider,
+                                  handler = function(h, ...) {
+                                      if (!is.null(transptimer))
+                                          transptimer$stop_timer()
+                                      transptimer <- gtimer(500, function(...) updateEverything(), one.shot = TRUE)
+                                  })
+            }
 
-            transptimer <- NULL
-            addHandlerChanged(transpSlider,
-                              handler = function(h, ...) {
-                                  if (!is.null(transptimer))
-                                      transptimer$stop_timer()
-                                  transptimer <- gtimer(500, function(...) updateEverything(), one.shot = TRUE)
-                              })
 
             add(mainGrp, tbl)
-
-
+            
             addSpring(mainGrp)
             ## --------------------------------------------------  SLIDERS
             grpTbl <<- glayout(expand = FALSE, cont = mainGrp)
@@ -599,18 +685,36 @@ iNZightMapMod <- setRefClass(
         ## update plot function
         updatePlot = function() {
             args <- list(x = map.object, varnames = list())
-            if (!is.null(map.vars$colby)) {
-                args$colby <- activeData[[map.vars$colby]]
-                args$varnames$colby = map.vars$colby
+            if (map.type == "shape") {
+                if (!is.null(map.vars$y)) {
+                    args$variable <- activeData[[map.vars$y]]
+                    args$varnames$y = map.vars$y
+                } else return(invisible(NULL))
+
+                args$col <- map.vars$col
+                args$na.fill <- "white"
+            } else {
+                if (!is.null(map.vars$colby)) {
+                    args$colby <- activeData[[map.vars$colby]]
+                    args$varnames$colby = map.vars$colby
+                }
+                if (!is.null(map.vars$sizeby)) {
+                    args$sizeby <- activeData[[map.vars$sizeby]]
+                    args$varnames$sizeby = map.vars$sizeby
+                }
+                if (!is.null(map.vars$opacity)) {
+                    args$opacity <- map.vars$opacity
+                    args$varnames$opacity = map.vars$opacity
+                }
+
+                args$col.pt <- map.vars$col.pt
+                args$cex.pt <- map.vars$cex.pt
+                args$alpha <- map.vars$alpha
+                
+                args$type <- map.type
             }
-            if (!is.null(map.vars$sizeby)) {
-                args$sizeby <- activeData[[map.vars$sizeby]]
-                args$varnames$sizeby = map.vars$sizeby
-            }
-            if (!is.null(map.vars$opacity)) {
-                args$opacity <- map.vars$opacity
-                args$varnames$opacity = map.vars$opacity
-            }
+
+            
             if (!is.null(map.vars$g1)) {
                 args$varnames$g1 = map.vars$g1
                 if (!is.null(map.vars$g1.level))
@@ -620,13 +724,7 @@ iNZightMapMod <- setRefClass(
                 args$varnames$g2 = map.vars$g2
                 if (!is.null(map.vars$g2.level))
                     args$varnames$g2.level <- map.vars$g2.level
-            }
-
-            args$col.pt <- map.vars$col.pt
-            args$cex.pt <- map.vars$cex.pt
-            args$alpha <- map.vars$alpha
-
-            args$type <- map.type
+            }            
 
             if (!is.null(extra.args))
                 args <- c(args, extra.args)
