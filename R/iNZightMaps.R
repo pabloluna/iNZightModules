@@ -202,8 +202,8 @@ iNZightMapMod <- setRefClass(
             map.object <<-
                 if (map.type == "shape") {
                     iNZightMaps::iNZightShapeMap(data = activeData,
-                                                location = map.vars$location,
-                                                data.region = map.vars$location.var)
+                                                 location = map.vars$location,
+                                                 data.region = map.vars$location.var)
                 } else {
                     iNZightMaps::iNZightMap(lat = eval(parse(text = paste("~", map.vars$latitude))),
                                             lon = eval(parse(text = paste("~", map.vars$longitude))),
@@ -687,12 +687,13 @@ iNZightMapMod <- setRefClass(
             args <- list(x = map.object, varnames = list())
             if (map.type == "shape") {
                 if (!is.null(map.vars$y)) {
-                    args$variable <- activeData[[map.vars$y]]
+                    args$variable <- eval(parse(text = paste("~", map.vars$y)))
                     args$varnames$y = map.vars$y
                 } else return(invisible(NULL))
 
                 args$col <- map.vars$col
                 args$na.fill <- "white"
+                args$main <- "Map of ..."
             } else {
                 if (!is.null(map.vars$colby)) {
                     args$colby <- activeData[[map.vars$colby]]
