@@ -242,9 +242,9 @@ iNZightMapMod <- setRefClass(
                                             "\n\nOnce you've specified the locations of points, they are displayed on a map",
                                             "automatically. Using the drop downs, you can code variables and investigate",
                                             "any geographical patterns.",
-                                            "\n\nThe Maps module is new, and we have more features on the way, including",
-                                            "displaying regional data (such as for countries, states, provinces,",
-                                            "etc) on maps. Also feel free to send us any suggestions or problems",
+                                            "\n\nYou can also plot regional data (currently restricted to countries)",
+                                            "and shade countries by their value of a specified variable.",
+                                            "Also feel free to send us any suggestions or problems",
                                             "you come across:\n")
                                   txtAb <- gtext(text = aboutText, width = 380, height = NULL)
                                   add(gAb, txtAb, expand = TRUE)
@@ -257,9 +257,44 @@ iNZightMapMod <- setRefClass(
 
                                   cls <- gbutton("Close", handler = function(h, ...) dispose(wAb))
                                   add(gAb, cls, anchor = c(0, 1))
-
                               })
-            GUI$plotToolbar$update(NULL, refresh = "updatePlot", extra = list(aboutBtn))
+
+            zoomBtn <- gimage(stock.id = "zoom-in", size = "button")
+            zoomOutBtn <- gimage(stock.id = "zoom-out", size = "button")
+            if (map.type == "shape") {                
+                addHandlerClicked(zoomBtn, function(h, ...) {
+                                      if (is.null(GUI$activeModule$map.vars$g1)) {
+                                          iNZightMaps::sClickOnZoom(0.2)
+                                      } else {
+                                          gmessage("Cannot zoom when using subset variables.")
+                                      }
+                                  })
+                addHandlerClicked(zoomOutBtn, function(h, ...) {
+                                      if (is.null(GUI$activeModule$map.vars$g1)) {
+                                          iNZightMaps::sClickOnZoom(0.9)
+                                      } else {
+                                          gmessage("Cannot zoom when using subset variables.")
+                                      }
+                                  })
+            } else {
+                addHandlerClicked(zoomBtn, function(h, ...) {
+                                      if (is.null(GUI$activeModule$map.vars$g1)) {
+                                          iNZightMaps::ClickOnZoom(0.2)
+                                      } else {
+                                          gmessage("Cannot zoom when using subset variables.")
+                                      }
+                                  })
+                addHandlerClicked(zoomOutBtn, function(h, ...) {
+                                      if (is.null(GUI$activeModule$map.vars$g1)) {
+                                          iNZightMaps::ClickOnZoom(0.9)
+                                      } else {
+                                          gmessage("Cannot zoom when using subset variables.")
+                                      }
+                                  })
+            }
+            
+            
+            GUI$plotToolbar$update(NULL, refresh = "updatePlot", extra = list(zoomBtn, zoomOutBtn, aboutBtn))
 
             ## mainGrp
             mainGrp <<- gvbox(spacing = 10, container = GUI$moduleWindow, expand = TRUE)
@@ -719,7 +754,7 @@ iNZightMapMod <- setRefClass(
             }
         },
         changePlotSettings = function(set, reset = FALSE) {
-            map.vars <<- c(map.vars, set$varnames)
+            map.vars <<- modifyList(map.vars, set$varnames)
 
             set$varnames <- NULL
             if (reset)
