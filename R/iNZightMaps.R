@@ -275,7 +275,7 @@ iNZightMapMod <- setRefClass(
             addSpace(mainGrp, 20)
 
 
-            tbl <- glayout()
+            tbl <- glayout(homogeneous = FALSE)
             ii <- 1
 
             if (map.type == "shape") {
@@ -378,7 +378,15 @@ iNZightMapMod <- setRefClass(
                         is.na(which(pointCols == map.vars$col.pt)[1]),
                         1,
                         which(pointCols == map.vars$col.pt)[1]),
-                    editable = TRUE)
+                    editable = FALSE)
+
+                naFillCol <- gcombobox(
+                    c("grey50", "lightslategrey", "white", "black", "red"),
+                    selected = ifelse(
+                        is.na(which(pointCols == map.vars$col.pt)[1]),
+                        1,
+                        which(pointCols == map.vars$col.pt)[1]),
+                    editable = FALSE)
             } else {
                 pointCols <- c("grey50", "black", "darkblue", "darkgreen",
                                "darkmagenta", "darkslateblue", "hotpink4",
@@ -395,6 +403,11 @@ iNZightMapMod <- setRefClass(
             tbl[ii,  1, anchor = c(1, 0), expand = TRUE] <- lbl
             tbl[ii,  2, expand = TRUE] <- symbolColList
             ii <- ii + 1
+
+            if (map.type == "shape") {
+                tbl[ii, 1, anchor = c(1, 0), expand = TRUE] <- glabel("Missing value colour :")
+                tbl[ii, 2, expand = TRUE] <- naFillCol
+            }
 
 
             if (map.type != "shape") {
@@ -416,6 +429,20 @@ iNZightMapMod <- setRefClass(
             }
 
 
+            ## Labels
+            if (map.type == "shape") {
+                ii <- ii + 1
+                
+                lbl <- glabel("Plot labels :")
+                mapLbls <- gcombobox(c("None", paste(map.vars$location.var, "name"), "Value", "Both"))
+                tbl[ii, 1, anchor = c(1, 0), expand = TRUE] <- lbl
+                tbl[ii, 2, expand = TRUE] <- mapLbls
+                ii <- ii + 1
+                
+                addHandlerChanged(mapLbls, function(h, ...) updateEverything())                                  
+            }
+
+
 
 
             ## Maintain a single function that is called whenever anything is updated:
@@ -423,6 +450,8 @@ iNZightMapMod <- setRefClass(
                 if (map.type == "shape") {
                     map.vars$y <<- svalue(yVarList)
                     map.vars$col <<- svalue(symbolColList)
+                    map.vars$na.fill <<- svalue(naFillCol)
+                    map.vars$map.labels <<- svalue(mapLbls, index = TRUE)
                 } else {
                     if (svalue(colVarList, TRUE) > 1) map.vars$colby <<- svalue(colVarList) else map.vars$colby <<- NULL
                     if (svalue(rszVarList, TRUE) > 1) map.vars$sizeby <<- svalue(rszVarList) else map.vars$sizeby <<- NULL
@@ -440,7 +469,8 @@ iNZightMapMod <- setRefClass(
 
             ## in this case, no point in having a separate "show" button
             if (map.type == "shape") {
-                addHandlerChanged(yVarList, handler = function(h, ...) updateEverything())
+                addHandlerChanged(yVarList, handler = function(h, ...) if (svalue(h$obj, TRUE) > 1) updateEverything())
+                addHandlerChanged(naFillCol, handler = function(h, ...) updateEverything())
             } else {
                 addHandlerChanged(colVarList, handler = function(h, ...) updateEverything())
                 addHandlerChanged(rszVarList, handler = function(h, ...) updateEverything())
@@ -453,7 +483,7 @@ iNZightMapMod <- setRefClass(
                               handler = function(h, ...) {
                                   if (!is.null(pcoltimer))
                                       pcoltimer$stop_timer()
-                                  pcoltimer <- gtimer(500, function(...) {
+                                  pcoltimer <- gtimer(200, function(...) {
                                                           if (nchar(svalue(symbolColList)) >= 3)
                                                               updateEverything()
                                                       }, one.shot = TRUE)
@@ -518,10 +548,11 @@ iNZightMapMod <- setRefClass(
                         deleteSlider(pos = 2)
                         if (svalue(G1box, index = TRUE) > 1) {
                             val <- svalue(G1box)
+                            ds <- if (map.type == "shape") map.object$data else activeData
                             createSlider(pos = 2, val)
                             changePlotSettings(list(
                                 g1 = iNZightPlots:::convert.to.factor(
-                                    activeData[val][[1]]
+                                    ds[val][[1]]
                                     ),
                                 g1.level = "_MULTI",
                                 varnames = list(
@@ -549,10 +580,11 @@ iNZightMapMod <- setRefClass(
                         deleteSlider(pos = 4)
                         if (svalue(G2box, index = TRUE) > 1) {
                             val <- svalue(G2box)
+                            ds <- if (map.type == "shape") map.object$data else activeData
                             createSlider(pos = 4, val)
                             changePlotSettings(list(
                                 g2 = iNZightPlots:::convert.to.factor(
-                                    activeData[val][[1]]
+                                    ds[val][[1]]
                                     ),
                                 g2.level = "_ALL",
                                 varnames = list(
@@ -605,7 +637,8 @@ iNZightMapMod <- setRefClass(
             sliderGrp <- ggroup(horizontal = FALSE)
 
             ## build the level names that are used for the slider
-            grpData <- activeData[dropdata][[1]]
+            ds <- if (map.type == "shape") map.object$data else activeData
+            grpData <- ds[dropdata][[1]]
             grpData <- iNZightPlots:::convert.to.factor(grpData)
             if (pos == 2)
                 lev <- c("_MULTI", levels(grpData))
@@ -702,7 +735,8 @@ iNZightMapMod <- setRefClass(
             if (map.type == "shape") {
                 if (!is.null(map.vars$y)) {
                     args$variable <- eval(parse(text = paste("~", map.vars$y)))
-                    args$varnames$y = map.vars$y
+                    args$varnames$x = map.vars$y
+                    args$varnames$y = map.vars$location.var
                 } else return(invisible(NULL))
 
                 switch(map.vars$col,
@@ -715,8 +749,11 @@ iNZightMapMod <- setRefClass(
                            args$col <- map.vars$col
                        })
                 
-                args$na.fill <- "white"
-                args$main <- "Map of ..."
+                args$na.fill <- map.vars$na.fill
+
+                args$name <- switch(map.vars$map.labels,
+                                    "", "r", "v", "b")
+
             } else {
                 if (!is.null(map.vars$colby)) {
                     args$colby <- activeData[[map.vars$colby]]
