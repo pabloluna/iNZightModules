@@ -367,16 +367,30 @@ iNZightMapMod <- setRefClass(
 
             ## COLOUR
             lbl <- glabel("Colour :")
-            pointCols <- c("grey50", "black", "darkblue", "darkgreen",
-                           "darkmagenta", "darkslateblue", "hotpink4",
-                           "lightsalmon2", "palegreen3", "steelblue3")
-            symbolColList <- gcombobox(
-                pointCols,
-                selected = ifelse(
-                    is.na(which(pointCols == map.vars$col.pt)[1]),
-                    1,
-                    which(pointCols == map.vars$col.pt)[1]),
-                editable = TRUE)
+            if (map.type == "shape") {
+                pointCols <- c("red", "darkblue", "darkgreen", "darkmegenta",
+                               "darkslateblue", "hotpink4", "lightsalmon2",
+                               "palgreen3", "steelblue3",
+                               "heat", "terrain")
+                symbolColList <- gcombobox(
+                    pointCols,
+                    selected = ifelse(
+                        is.na(which(pointCols == map.vars$col.pt)[1]),
+                        1,
+                        which(pointCols == map.vars$col.pt)[1]),
+                    editable = TRUE)
+            } else {
+                pointCols <- c("grey50", "black", "darkblue", "darkgreen",
+                               "darkmagenta", "darkslateblue", "hotpink4",
+                               "lightsalmon2", "palegreen3", "steelblue3")
+                symbolColList <- gcombobox(
+                    pointCols,
+                    selected = ifelse(
+                        is.na(which(pointCols == map.vars$col.pt)[1]),
+                        1,
+                        which(pointCols == map.vars$col.pt)[1]),
+                    editable = TRUE)
+            }
 
             tbl[ii,  1, anchor = c(1, 0), expand = TRUE] <- lbl
             tbl[ii,  2, expand = TRUE] <- symbolColList
@@ -691,7 +705,16 @@ iNZightMapMod <- setRefClass(
                     args$varnames$y = map.vars$y
                 } else return(invisible(NULL))
 
-                args$col <- map.vars$col
+                switch(map.vars$col,
+                       "heat" = ,
+                       "terrain" = {
+                           args$col.fun <- map.vars$col
+                       },
+                       ... = {
+                           args$col.fun <- NULL
+                           args$col <- map.vars$col
+                       })
+                
                 args$na.fill <- "white"
                 args$main <- "Map of ..."
             } else {
