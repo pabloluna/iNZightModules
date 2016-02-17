@@ -263,10 +263,28 @@ iNZightMapMod <- setRefClass(
             zoomOutBtn <- gimage(stock.id = "zoom-out", size = "button")
             if (map.type == "shape") {                
                 addHandlerClicked(zoomBtn, function(h, ...) {
-                                      if (is.null(GUI$activeModule$map.vars$g1)) {
-                                          iNZightMaps::sClickOnZoom(0.2)
+                                      cat("================\n\n")
+                                      print(GUI$activeModule$map.vars)
+                                      err <- FALSE
+                                      curVars <- GUI$activeModule$map.vars
+                                      if (!is.null(curVars$g1)) {
+                                          if (is.null(curVars$g1.level)) {
+                                              err <- TRUE
+                                          } else if (curVars$g1.level == "_MULTI") {
+                                              err <- TRUE
+                                          }
+                                      }
+                                      
+                                      if (!is.null(curVars$g2)) {
+                                          if (!is.null(curVars$g2.level)) {
+                                              if (curVars$g2.level == "_MULTI") err <- TRUE
+                                          }
+                                      }
+                                      
+                                      if (err) {
+                                          gmessage("Cannot zoom when displaying multiple subsets.")
                                       } else {
-                                          gmessage("Cannot zoom when using subset variables.")
+                                          iNZightMaps::sClickOnZoom(0.2)
                                       }
                                   })
                 addHandlerClicked(zoomOutBtn, function(h, ...) {
