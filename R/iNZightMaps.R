@@ -263,50 +263,32 @@ iNZightMapMod <- setRefClass(
             zoomOutBtn <- gimage(stock.id = "zoom-out", size = "button")
             if (map.type == "shape") {                
                 addHandlerClicked(zoomBtn, function(h, ...) {
-                                      cat("================\n\n")
-                                      print(GUI$activeModule$map.vars)
-                                      err <- FALSE
-                                      curVars <- GUI$activeModule$map.vars
-                                      if (!is.null(curVars$g1)) {
-                                          if (is.null(curVars$g1.level)) {
-                                              err <- TRUE
-                                          } else if (curVars$g1.level == "_MULTI") {
-                                              err <- TRUE
-                                          }
-                                      }
-                                      
-                                      if (!is.null(curVars$g2)) {
-                                          if (!is.null(curVars$g2.level)) {
-                                              if (curVars$g2.level == "_MULTI") err <- TRUE
-                                          }
-                                      }
-                                      
-                                      if (err) {
-                                          gmessage("Cannot zoom when displaying multiple subsets.")
-                                      } else {
+                                      if (canIZoom()) {
                                           iNZightMaps::sClickOnZoom(0.2)
+                                      } else {
+                                          gmessage("Cannot zoom when displaying multiple subsets.")
                                       }
                                   })
                 addHandlerClicked(zoomOutBtn, function(h, ...) {
-                                      if (is.null(GUI$activeModule$map.vars$g1)) {
+                                      if (canIZoom()) {
                                           iNZightMaps::sClickOnZoom(0.9)
                                       } else {
-                                          gmessage("Cannot zoom when using subset variables.")
+                                          gmessage("Cannot zoom when displaying multiple subsets.")
                                       }
                                   })
             } else {
                 addHandlerClicked(zoomBtn, function(h, ...) {
-                                      if (is.null(GUI$activeModule$map.vars$g1)) {
+                                      if (canIZoom()) {
                                           iNZightMaps::ClickOnZoom(0.2)
                                       } else {
-                                          gmessage("Cannot zoom when using subset variables.")
+                                          gmessage("Cannot zoom when displaying multiple subsets.")
                                       }
                                   })
                 addHandlerClicked(zoomOutBtn, function(h, ...) {
-                                      if (is.null(GUI$activeModule$map.vars$g1)) {
+                                      if (canIZoom()) {
                                           iNZightMaps::ClickOnZoom(0.9)
                                       } else {
-                                          gmessage("Cannot zoom when using subset variables.")
+                                          gmessage("Cannot zoom when displaying multiple subsets.")
                                       }
                                   })
             }
@@ -677,6 +659,25 @@ iNZightMapMod <- setRefClass(
             visible(GUI$moduleWindow) <<- TRUE
 
             updatePlot()
+        },
+        canIZoom = function() {
+            err <- FALSE
+            curVars <- GUI$activeModule$map.vars
+            if (!is.null(curVars$g1)) {
+                if (is.null(curVars$g1.level)) {
+                    err <- TRUE
+                } else if (curVars$g1.level == "_MULTI") {
+                    err <- TRUE
+                }
+            }
+            
+            if (!is.null(curVars$g2)) {
+                if (!is.null(curVars$g2.level)) {
+                    if (curVars$g2.level == "_MULTI") err <- TRUE
+                }
+            }
+
+            !err
         },
         createSlider = function(pos, dropdata) {
             ## make sure there is no slider at the pos
