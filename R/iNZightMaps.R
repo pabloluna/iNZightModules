@@ -264,14 +264,14 @@ iNZightMapMod <- setRefClass(
             if (map.type == "shape") {                
                 addHandlerClicked(zoomBtn, function(h, ...) {
                                       if (canIZoom()) {
-                                          iNZightMaps::sClickOnZoom(0.2)
+                                          zoom <- iNZightMaps::sClickOnZoom(3/4)
                                       } else {
                                           gmessage("Cannot zoom when displaying multiple subsets.")
                                       }
                                   })
                 addHandlerClicked(zoomOutBtn, function(h, ...) {
                                       if (canIZoom()) {
-                                          iNZightMaps::sClickOnZoom(0.9)
+                                          iNZightMaps::sClickOnZoom(4/3)
                                       } else {
                                           gmessage("Cannot zoom when displaying multiple subsets.")
                                       }
@@ -279,14 +279,14 @@ iNZightMapMod <- setRefClass(
             } else {
                 addHandlerClicked(zoomBtn, function(h, ...) {
                                       if (canIZoom()) {
-                                          iNZightMaps::ClickOnZoom(0.2)
+                                          iNZightMaps::ClickOnZoom(3/4)
                                       } else {
                                           gmessage("Cannot zoom when displaying multiple subsets.")
                                       }
                                   })
                 addHandlerClicked(zoomOutBtn, function(h, ...) {
                                       if (canIZoom()) {
-                                          iNZightMaps::ClickOnZoom(0.9)
+                                          iNZightMaps::ClickOnZoom(4/3)
                                       } else {
                                           gmessage("Cannot zoom when displaying multiple subsets.")
                                       }
