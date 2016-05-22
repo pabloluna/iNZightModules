@@ -297,17 +297,17 @@ iNZightMapMod <- setRefClass(
             GUI$plotToolbar$update(NULL, refresh = "updatePlot", extra = list(zoomBtn, zoomOutBtn, aboutBtn))
 
             ## mainGrp
-            mainGrp <<- gvbox(spacing = 10, container = GUI$moduleWindow, expand = TRUE)
+            mainGrp <<- gvbox(spacing = 5, container = GUI$moduleWindow, expand = TRUE)
             mainGrp$set_borderwidth(5)
 
-            addSpace(mainGrp, 15)
+            addSpace(mainGrp, 10)
 
-            lbl1 <- glabel("Maps Module")
+            lbl1 <- glabel("iNZight Maps")
             font(lbl1) <- list(weight = "bold",
                                family = "normal",
                                size   = 12)
             add(mainGrp, lbl1, anchor = c(0, 0))
-            addSpace(mainGrp, 20)
+            addSpace(mainGrp, 10)
 
 
             tbl <- glayout(homogeneous = FALSE)
@@ -321,12 +321,12 @@ iNZightMapMod <- setRefClass(
                         1, which(rszNames == map.vars$y)[1] + 1
                         )
                     )
-                tbl[ii, 1:2, expand = TRUE] <- yVarList
+                tbl[ii, 1:6, expand = TRUE] <- yVarList
                 ii <- ii + 1
             } else {
                 lbl <- glabel("Code Variables")
                 font(lbl) <- list(weight = "bold", size = 11)
-                tbl[ii, 1:2, anchor = c(-1, -1), expand = TRUE] <- lbl
+                tbl[ii, 1:6, anchor = c(-1, -1), expand = TRUE] <- lbl
                 ii <- ii + 1
                 
                 lbl <- glabel("Colour by :")
@@ -337,24 +337,9 @@ iNZightMapMod <- setRefClass(
                                                          map.vars$colby)[1] + 1
                                             )
                                         )
-                tbl[ii, 1, anchor = c(1, 0), expand = TRUE] <- lbl
-                tbl[ii, 2, expand = TRUE] <- colVarList
-                ii <- ii + 1
-                
-                ## lvlCols <- gbutton("Specify colours")
-                ## tbl[ii, 2, expand = TRUE] <- lvlCols
-                ## visible(lvlCols) <- svalue(grpVarList, index = TRUE) != 1
-                ## ii <- ii + 1
-                
-                ## addHandlerClicked(lvlCols, function(h, ...) {
-                ##                       variable <- GUI$getActiveData()[, svalue(grpVarList, index = FALSE)]
-                ##                       if (is.numeric(variable)) {
-                ##                           gmessage("Set colour of numeric ... not yet implemented.", "Not ready yet.", icon = "warning")
-                ##                       } else {
-                ##                           specifyColours(variable)
-                ##                       }
-                ##                   })
-                
+                tbl[ii, 1:2, anchor = c(1, 0), expand = TRUE] <- lbl
+                tbl[ii, 3:6, expand = TRUE] <- colVarList
+                ii <- ii + 1                
                 
                 lbl <- glabel("Size by :")
                 rszVarList <- gcombobox(
@@ -364,8 +349,8 @@ iNZightMapMod <- setRefClass(
                         1, which(rszNames == map.vars$sizeby)[1] + 1
                         )
                     )
-                tbl[ii, 1, anchor = c(1, 0), expand = TRUE] <- lbl
-                tbl[ii, 2, expand = TRUE] <- rszVarList
+                tbl[ii, 1:2, anchor = c(1, 0), expand = TRUE] <- lbl
+                tbl[ii, 3:6, expand = TRUE] <- rszVarList
                 ii <- ii + 1
                 
                 
@@ -377,8 +362,8 @@ iNZightMapMod <- setRefClass(
                         1, which(numNames == map.vars$opacity)[1] + 1
                         )
                     )
-                tbl[ii, 1, anchor = c(1, 0), expand = TRUE] <- lbl
-                tbl[ii, 2, expand = TRUE] <- opctyVarList
+                tbl[ii, 1:2, anchor = c(1, 0), expand = TRUE] <- lbl
+                tbl[ii, 3:6, expand = TRUE] <- opctyVarList
                 ii <- ii + 1
             }
             
@@ -386,7 +371,7 @@ iNZightMapMod <- setRefClass(
             ii <- ii + 1
             lbl <- glabel("Plot Options")
             font(lbl) <- list(weight = "bold", size = 11)
-            tbl[ii, 1:2, anchor = c(-1, -1), expand = TRUE] <- lbl
+            tbl[ii, 1:6, anchor = c(-1, -1), expand = TRUE] <- lbl
             ii <- ii + 1
 
             
@@ -394,8 +379,8 @@ iNZightMapMod <- setRefClass(
                 lbl <- glabel("Map type :")
                 typeOpts <- c("roadmap", "satellite", "terrain", "hybrid")
                 typeList <- gcombobox(typeOpts)
-                tbl[ii, 1, anchor = c(1, 0), expand = TRUE] <- lbl
-                tbl[ii, 2, expand = TRUE] <- typeList
+                tbl[ii, 1:2, anchor = c(1, 0), expand = TRUE] <- lbl
+                tbl[ii, 3:6, expand = TRUE] <- typeList
                 ii <- ii + 1
             }
 
@@ -435,13 +420,13 @@ iNZightMapMod <- setRefClass(
                     editable = TRUE)
             }
 
-            tbl[ii,  1, anchor = c(1, 0), expand = TRUE] <- lbl
-            tbl[ii,  2, expand = TRUE] <- symbolColList
+            tbl[ii,  1:2, anchor = c(1, 0), expand = TRUE] <- lbl
+            tbl[ii,  3:6, expand = TRUE] <- symbolColList
             ii <- ii + 1
 
             if (map.type == "shape") {
-                tbl[ii, 1, anchor = c(1, 0), expand = TRUE] <- glabel("Missing value colour :")
-                tbl[ii, 2, expand = TRUE] <- naFillCol
+                tbl[ii, 1:2, anchor = c(1, 0), expand = TRUE] <- glabel("Missing value colour :")
+                tbl[ii, 3:6, expand = TRUE] <- naFillCol
             }
 
 
@@ -450,17 +435,33 @@ iNZightMapMod <- setRefClass(
                 lbl <- glabel("Point size :")
                 cexSlider <- gslider(from = 0.05, to = 3.5,
                                      by = 0.05, value = map.vars$cex.pt)
-                tbl[ii, 1, anchor = c(1, 0), expand = TRUE] <- lbl
-                tbl[ii, 2, expand = TRUE] <- cexSlider
+                tbl[ii, 1:2, anchor = c(1, 0), expand = TRUE] <- lbl
+                tbl[ii, 3:6, expand = TRUE] <- cexSlider
                 ii <- ii + 1
                 
                 ## Transparency
                 lbl <- glabel("Transparency :")
                 transpSlider <- gslider(from = 0, to = 100,
                                         by = 1, value = 100 * (1 - map.vars$alpha))
-                tbl[ii, 1, anchor = c(1, 0), expand = TRUE] <- lbl
-                tbl[ii, 2, expand = TRUE] <- transpSlider
+                tbl[ii, 1:2, anchor = c(1, 0), expand = TRUE] <- lbl
+                tbl[ii, 3:6, expand = TRUE] <- transpSlider
                 ii <- ii + 1
+
+                ## Connect by lines
+                joinPts <- gcheckbox("Connect points by lines", checked = FALSE)
+                if (!is.null(map.vars$join)) svalue(joinPts) <- map.vars$join
+                
+                joinCols <- c("red", "black", "blue", "green4",
+                              "yellow", "pink", "grey", "orange")
+                joinCol <- gcombobox(joinCols)
+                if (!is.null(map.vars$col.line))
+                    if (map.vars$col.line %in% joinCols)
+                        svalue(joinCol) <- which(joinCols == map.vars$col.line)
+                enabled(joinCol) <- svalue(colVarList, TRUE) == 1
+                tbl[ii, 1:3, expand = TRUE, anchor = c(-1, 0)] <- joinPts
+                tbl[ii, 4:6, expand = TRUE] <- joinCol
+                addHandlerChanged(joinPts, function(h, ...) updateEverything())
+                addHandlerChanged(joinCol, function(h, ...) updateEverything())
             }
 
 
@@ -495,6 +496,8 @@ iNZightMapMod <- setRefClass(
                     map.vars$col.pt <<- svalue(symbolColList)
                     map.vars$cex.pt <<- svalue(cexSlider)
                     map.vars$alpha <<- 1 - svalue(transpSlider) / 100
+                    map.vars$join <<- svalue(joinPts)
+                    map.vars$col.line <<- svalue(joinCol)
                     
                     map.type <<- svalue(typeList)
                 }
@@ -507,7 +510,10 @@ iNZightMapMod <- setRefClass(
                 addHandlerChanged(yVarList, handler = function(h, ...) if (svalue(h$obj, TRUE) > 1) updateEverything())
                 addHandlerChanged(naFillCol, handler = function(h, ...) updateEverything())
             } else {
-                addHandlerChanged(colVarList, handler = function(h, ...) updateEverything())
+                addHandlerChanged(colVarList, handler = function(h, ...) {
+                                      enabled(joinCol) <- svalue(colVarList, TRUE) == 1
+                                      updateEverything()
+                                  })
                 addHandlerChanged(rszVarList, handler = function(h, ...) updateEverything())
                 addHandlerChanged(opctyVarList, handler = function(h, ...) updateEverything())
                 addHandlerChanged(typeList, handler = function(h, ...) updateEverything())
@@ -825,6 +831,8 @@ iNZightMapMod <- setRefClass(
                 args$col.pt <- map.vars$col.pt
                 args$cex.pt <- map.vars$cex.pt
                 args$alpha <- map.vars$alpha
+                args$join <- map.vars$join
+                args$col.line <- map.vars$col.line
                 
                 args$type <- map.type
             }
