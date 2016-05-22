@@ -20,11 +20,10 @@ Imports:
     iNZightTools,
     iNZightMR,
     iNZightTS,
-    iNZightMaps,
     gpairs,
     methods
 Suggests:
-    iNZightModules,
+    iNZightMaps,
     rgl,
     mgcv
 License: GPL-2
