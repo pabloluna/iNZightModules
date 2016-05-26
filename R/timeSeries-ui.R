@@ -504,11 +504,16 @@ timeSeries <- function(e) {
                                      start = ts.info$start,
                                      freq = ts.info$frequency,
                                      var=svalue(tsVarselect,index= TRUE))
-                forecastWindow(forecastplot(var.df2,  multiplicative = svalue(radio.group) == "Multiplicative",
-                                            ylab = svalue(ylab.input), 
-                                            show = FALSE))
-                forecastplot(var.df2,  multiplicative = svalue(radio.group) == "Multiplicative",
-                             ylab = svalue(ylab.input))
+                tryCatch({
+                    forecastWindow(forecastplot(var.df2,  multiplicative = svalue(radio.group) == "Multiplicative",
+                                                ylab = svalue(ylab.input), 
+                                                show = FALSE))
+                    forecastplot(var.df2,  multiplicative = svalue(radio.group) == "Multiplicative",
+                                 ylab = svalue(ylab.input))
+                },
+                         error = function(e)
+                             gmessage("Holt Winters could not converge. Try using a Multiplicative time series."),
+                         finally = NULL)
             }
         }
     ))
