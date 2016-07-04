@@ -388,9 +388,9 @@ iNZightMapMod <- setRefClass(
             ## COLOUR
             lbl <- glabel("Colour :")
             if (map.type == "shape") {
-                pointCols <- c("red", "darkblue", "darkgreen", "darkmegenta",
+                pointCols <- c("red", "darkblue", "darkgreen", "darkmagenta",
                                "darkslateblue", "hotpink4", "lightsalmon2",
-                               "palgreen3", "steelblue3",
+                               "palegreen3", "steelblue3",
                                "heat", "terrain")
                 symbolColList <- gcombobox(
                     pointCols,
@@ -501,7 +501,7 @@ iNZightMapMod <- setRefClass(
                     
                     map.type <<- svalue(typeList)
                 }
-
+                
                 updatePlot()
             }
 
@@ -804,7 +804,7 @@ iNZightMapMod <- setRefClass(
                        "terrain" = {
                            args$col.fun <- map.vars$col
                        },
-                       ... = {
+                       {
                            args$col.fun <- NULL
                            args$col <- map.vars$col
                        })
