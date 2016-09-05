@@ -127,7 +127,7 @@ modelFitting = function(e) {
       response.varlist[svalue(response.varlist,index=TRUE),2] <- "Cat"
     })
   ) 
-  add3rdmousePopupMenu(response.varlist, TableMenulist)
+  addRightclickPopupMenu(response.varlist, TableMenulist)
   addHandlerSelect(response.varlist, handler = function(h, ...) {
     Class = response.varlist[svalue(response.varlist, index = TRUE),2]
     Var = mydata[,svalue(response.varlist,indxe= TRUE)]

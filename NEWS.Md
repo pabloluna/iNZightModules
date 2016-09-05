@@ -1,11 +1,15 @@
 # Version 2.0
-__Release date__: 11 July, 2015
+__Release date__: 11 July, 2016
 
 ## Major Changes
 
 - Redesigned Multiple Response Module
 - Redesigned Maps module
 - Change how module dependencies are imported (using `::`)
+
+### Patch 2.0-1 - 05/09/2016
+
+- Fix depreciation of `add3rdmouseButtonDropMenu` to `addRightclickDropMenu` in `gWidgets2` package.
 
 
 ***
