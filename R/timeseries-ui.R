@@ -47,7 +47,10 @@ timeSeries <- function(e) {
   
     loadTimeInfo <- function() {
         vardata <- tag(e$obj, "dataSet")[, svalue(e$tsTimeVar)]
-        ts.info <- get.ts.structure(vardata)
+        ts.info <- try(get.ts.structure(vardata), silent = TRUE)
+        if (inherits(ts.info, "try-error")) {
+            ts.info <- list(start = NA, frequency = NA)
+        }
         tsStructure <<- ts.info
         if (any(is.na(ts.info$start))) {
             if (! fully.loaded) {
