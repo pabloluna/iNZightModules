@@ -23,7 +23,21 @@ cHist <-
 as.catergory <- function(x, ...) 
   factor(x, ...)
 
-
+##' A GUI for fitting ([survey] generalised) linear models.
+##'
+##' Provides a UI - probably needs rewriting (using RC) to avoid stuff like `<<-` and
+##' attaching to the Global Environment.
+##' 
+##' @title Model Fitting Module
+##' @param e going out of fashion... needs to be written as a reference class.
+##' @return NULL
+##' 
+##' @author Tom Elliott
+##'
+##' @import iNZightRegression
+##' @importFrom iNZightTools fitModel fitDesign
+##'
+##' @export
 modelFitting = function(e) {
   
   mydata <- tag(e$obj, "dataSet")
@@ -63,16 +77,16 @@ modelFitting = function(e) {
   mainGp <- gvbox(container = modellingWin,use.scrollwindow = TRUE)
   
   
-  title <- glabel("Model Response (Y) using Variables of Interest and Confounders",cont=mainGp)
+  title <- glabel("Model Response (Y) using Variables of Interest and Confounders",container=mainGp)
   font(title) <- list(weight = "bold",size=15)
   
   
   #resp.label <- glabel("Variable")
   #font(resp.label) <- list(weight = "bold")
-  paned <- gpanedgroup(cont = mainGp)
-  lgroup <- ggroup(cont=paned,horizontal=FALSE,expand=TRUE)
+  paned <- gpanedgroup(container = mainGp)
+  lgroup <- ggroup(container = paned,horizontal=FALSE,expand=TRUE)
   original.label <- NULL
-  response.varlist.panel <- gframe("Variables",cont=lgroup)
+  response.varlist.panel <- gframe("Variables",container = lgroup)
   # new gtable is coming from here
   ## find icons by class
   myClass <- function(df) {
@@ -113,7 +127,7 @@ modelFitting = function(e) {
       response.varlist[svalue(response.varlist,index=TRUE),2] <- "Cat"
     })
   ) 
-  add3rdmousePopupMenu(response.varlist, TableMenulist)
+  addRightclickPopupMenu(response.varlist, TableMenulist)
   addHandlerSelect(response.varlist, handler = function(h, ...) {
     Class = response.varlist[svalue(response.varlist, index = TRUE),2]
     Var = mydata[,svalue(response.varlist,indxe= TRUE)]
@@ -139,13 +153,13 @@ modelFitting = function(e) {
   ## or do subsetting...(needed!!)
   ## or giving a place to let user to type the name of the data frame they want
   ## transforming variables here is ok, but don't too much
-  showDF <- gbutton("Show Data",cont=lgroup, handler = function(h,...) {
+  showDF <- gbutton("Show Data",container = lgroup, handler = function(h,...) {
     mydata.window <- gwindow("showing mydata",parent = modellingWin)
-    mydata.frame <- gdf(mydata, cont = mydata.window)
+    mydata.frame <- gdf(mydata, container = mydata.window)
   })
   
   
-  main.layout <- glayout(cont = paned)
+  main.layout <- glayout(container = paned)
   y.label <- glabel("Response (Y)")
   main.layout[1, 2] <- y.label
   moving.y <- gcombobox(c("", names(tag(modellingWin, "dataSet"))))
@@ -338,7 +352,7 @@ modelFitting = function(e) {
   offset.label <- glabel("offset")
   offset.edit <- gedit(initial.msg = "accept expression here only")
   extraargs.frame <- gframe("Extra arguments: ")
-  extraargs.layout <- glayout(cont = extraargs.frame)
+  extraargs.layout <- glayout(container = extraargs.frame)
   extraargs.layout[1, 1] <- quasi.label
   extraargs.layout[1, 2] <- quasi.edit
   extraargs.layout[2, 1] <- offset.label
@@ -405,9 +419,9 @@ modelFitting = function(e) {
   
   svy.design <- NULL
   svy.frame <- gframe("survey design")
-  gsvy.frame <- ggroup(cont = svy.frame)
+  gsvy.frame <- ggroup(container = svy.frame)
   size(gsvy.frame) <- c(200, 250)
-  svy.layout <- glayout(cont = gsvy.frame)
+  svy.layout <- glayout(container = gsvy.frame)
   svy.layout[1, 1, anchor =c(0, 0)] <- svycluster.label
   svy.layout[1, 2, anchor =c(0, 0), expand = TRUE] <- svycluster.edit
   size(svycluster.edit) <- c(100,20)
@@ -437,7 +451,7 @@ modelFitting = function(e) {
   aovcontr.edit <- gedit()
   
   aov.frame <- gframe("Experiment design")
-  aov.layout <- glayout(cont = aov.frame)
+  aov.layout <- glayout(container = aov.frame)
   aov.layout[1, 1, anchor=c(0, 0)] <- aovproj.label
   aov.layout[1, 2, anchor=c(0, 0)] <- aovproj.edit
   aov.layout[2, 1, anchor=c(0, 0)] <- aovqr.label
@@ -711,16 +725,16 @@ modelFitting = function(e) {
                          #if(!(entry %in% names(test.factorset))) 
                          #   return(svalue(statusbar)<- paste(entry, "is not factor and no level can be reorder."))
                          relevel.window <- gwindow("relevel", width=300, height=20, visible=TRUE, parent = modellingWin)
-                         relevel.window.group <- ggroup(cont = relevel.window)
+                         relevel.window.group <- ggroup(container = relevel.window)
                          relevel.window.label1 <- glabel(paste("relevel(", entry, ","), 
-                                                         cont=relevel.window.group,
+                                                         container = relevel.window.group,
                                                          hanlder=function(h, ...) {h$obj})
                          print(test.factorset[[entry]])
                          relevel.window.droplist <- gcombobox(test.factorset[[entry]],
-                                                              cont=relevel.window.group)
+                                                              container = relevel.window.group)
                          size(relevel.window.droplist) <- c(100, -1) 
-                         relevel.window.label2 <- glabel(")", cont=relevel.window.group)
-                         submit.button <- gbutton("sumbit", cont = relevel.window.group, 
+                         relevel.window.label2 <- glabel(")", container = relevel.window.group)
+                         submit.button <- gbutton("sumbit", container = relevel.window.group, 
                                                   handler = function(h, ...) {
                                                     Transform.buttonI <- paste0("relevel(", entry ,", ref=","'",svalue(relevel.window.droplist),"'",")")
                                                     remove.action() 
@@ -955,11 +969,11 @@ modelFitting = function(e) {
     rename.window = gwindow("Rename Current Model", , parent = modellingWin, 
                             width=500, height=30)
     
-    rename.group = ggroup(cont = rename.window)
-    oldmodel.label = glabel(svalue(modelChooser), cont = rename.group)
-    sign.label = glabel("==>>", cont = rename.group)
+    rename.group = ggroup(container = rename.window)
+    oldmodel.label = glabel(svalue(modelChooser), container = rename.group)
+    sign.label = glabel("==>>", container = rename.group)
     newmodel.label <- gedit(text = "", initial.msg = "type the new name you want and press submit",
-                            cont = rename.group)
+                            container = rename.group)
     size(newmodel.label) <- c(300,30)
     anewmode.button <- gaction(label = "rename", tooltip = "Not accept name start by Number; Not accept '(','[','{','SPACE';
                                Or, you can use `your named model`.",handler = function(h, ...) {
@@ -981,7 +995,7 @@ modelFitting = function(e) {
                                  dispose(rename.window)
   })
     newmode.button <- gbutton(action = anewmode.button,
-                              cont = rename.group)
+                              container = rename.group)
     
     
     
@@ -1099,7 +1113,7 @@ modelFitting = function(e) {
   outputTxt = gtext("", font.attr=list(family="monospace"))
   add(mainGp, outputTxt, expand = TRUE)
   
-  statusbar = gstatusbar("You can try drag-drop the variable from 'Variables' panel to 'Response(Y)' panel, also Hold 'Ctrl' or 'Shift' to do multiple selection.",cont=mainGp)
+  statusbar = gstatusbar("You can try drag-drop the variable from 'Variables' panel to 'Response(Y)' panel, also Hold 'Ctrl' or 'Shift' to do multiple selection.",container = mainGp)
   
   #specified functional
 {
@@ -1487,7 +1501,7 @@ modelFitting = function(e) {
         lbl2 = glabel("Set as current.model?", container = dropObsFourthGp)
         font(lbl2) <- list(weight="bold", family = "normal")
         lbl2checkBox = gcheckbox("", checked = TRUE, container = dropObsFourthGp)
-        addSpring(dropObsFourthGp, horizontal = TRUE)
+        addSpring(dropObsFourthGp)
         
         is.wholenumber = function(x, tol = .Machindouble.eps^0.5)  abs(x - round(x)) < tol
         
@@ -1538,14 +1552,14 @@ modelFitting = function(e) {
     makePredictions = function(){
       predictionsWin = gwindow("Prediction", parent = modellingWin)
       predictionsMain = ggroup(horizontal = FALSE, container = predictionsWin, expand = TRUE)
-      addSpace(predictionsMain, 10, horizontal = FALSE)
+      addSpace(predictionsMain, 10)
       lbl1 = glabel(paste("Current Model :", listOfModels[svalue(modelChooser, index = TRUE)]), container = predictionsMain)
       font(lbl1) <- list(weight="bold", family = "normal")
-      addSpace(predictionsMain, 10, horizontal = FALSE)
+      addSpace(predictionsMain, 10)
       lbl2 = glabel("Type expressions needed for prediction and submit the command", container = predictionsMain)
       font(lbl2) <- list(weight="bold", family = "normal")
       lbl3 = glabel("Submit one expression at a time", container = predictionsMain)
-      addSpace(predictionsMain, 5, horizontal = FALSE)
+      addSpace(predictionsMain, 5)
       predictionsText = gtext(container = predictionsMain)
       submitButtGroup = ggroup(container = predictionsMain)
       addSpring(submitButtGroup)

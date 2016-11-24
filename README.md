@@ -1,15 +1,29 @@
-iNZightModules
-==============
+# iNZightModules
+### Add-on modules for iNZight
 
-Each sub module is now placed here... they are just GUI interfaces.
+This R package contains add-on modules for iNZight, each of which targets some particular application.
+The modules connect to a related `R` package, which will be downloaded as it is needed (to reduce the size of the iNZightVIT download).
 
+*******
 
-- mr.main.R: multiple response module UI
+The modules are as follows:
 
-- time-series-ui.R: multiple response module UI
+- __Quick Explore__ modules:  
+  These include `allBivarPlots.R`, `allUniPlots.R`, and `scatterPlotMatrix.R`,
+  which provide UI's for viewing all bivariate plots, all univariate plots, and
+  generating a scatter plot matrix, respectively.
 
-- scatterPlotMatrix: scatterPlotMatrix module UI
+- __3D Plot__:  
+  `plot3Dmode.R` - a UI for producing 3D plots of data, and `supportPlot3D.R` - support functions for the 3D plot.
 
-- plot3D mode.R: plot3D module UI
+- __Time Series__:  
+  `iNZightTS.R` - a UI for visualising and doing basic forecasts of time series data.
 
-- modelFitting.R: modelFitting module UI
+- __Model Fitting__:  
+  `modelFitting.R` - a UI for fitting ([survey] generalised) linear models to data, and generating model checking plots.
+
+- __Multiple Response__:  
+  `iNZightMultiRes.R` - a UI for visualising multiple response type data (e.g., check all that apply).
+
+- __Maps__:  
+  `iNZightMaps.R` - a UI for visualising geographical data.

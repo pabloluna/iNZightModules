@@ -1,4 +1,6 @@
-# This is a module used for graphical time series analysis.
+##' @author Junjie Zheng
+##' @import iNZightTS
+##' @export
 timeSeries <- function(e) {  
     tsenv <- new.env()
     ##  Something like this should be added in the right place so we can
@@ -45,7 +47,10 @@ timeSeries <- function(e) {
   
     loadTimeInfo <- function() {
         vardata <- tag(e$obj, "dataSet")[, svalue(e$tsTimeVar)]
-        ts.info <- get.ts.structure(vardata)
+        ts.info <- try(get.ts.structure(vardata), silent = TRUE)
+        if (inherits(ts.info, "try-error")) {
+            ts.info <- list(start = NA, frequency = NA)
+        }
         tsStructure <<- ts.info
         if (any(is.na(ts.info$start))) {
             if (! fully.loaded) {
@@ -637,7 +642,7 @@ timeSeries <- function(e) {
 
 
 
-
+##' @export
 valid.ts.info <- function(ts.info) {
     valid <- TRUE
     
@@ -650,6 +655,7 @@ valid.ts.info <- function(ts.info) {
     valid
 }
 
+##' @export
 valid.vars <- function(var.df) {
     var.classes <- lapply(var.df, class)
     ## Only allow numeric values
@@ -661,6 +667,7 @@ valid.vars <- function(var.df) {
 }
 
 
+##' @export
 createTSInfo <- function() {
     tsconvwin <- gwindow("Provide Time Series Information")
     tsgroup <- ggroup(horizontal = FALSE, container = tsconvwin)
@@ -705,6 +712,7 @@ createTSInfo <- function() {
 }
 
 
+##' @export
 forecastWindow <- function(forecastoutcome) {
     
     pw <- gwindow(title = "Forecast Output", width = 600, height = 400)
@@ -715,4 +723,6 @@ forecastWindow <- function(forecastoutcome) {
     insert(predtext, printed.text)
 }
 
+
+##' @export
 get.ts.structure <- iNZightTS:::get.ts.structure
