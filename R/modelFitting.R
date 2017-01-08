@@ -36,6 +36,7 @@ as.catergory <- function(x, ...)
 ##'
 ##' @import iNZightRegression
 ##' @importFrom iNZightTools fitModel fitDesign
+##' @import survey
 ##'
 ##' @export
 modelFitting = function(e) {
@@ -317,31 +318,36 @@ modelFitting = function(e) {
   main.layout[2, 5, expand=T] <- m.f.list 
   
   d.s.label <- glabel("Data \nStructure")
-  d.s.list <- gcombobox(c("Standard", "Complex Survey"),
-                        handler = function(h, ...) {
-                          if (svalue(h$obj) == "Standard") {
-                            svalue(statusbar) <- "Use modeling framework to select lm/glm"
-                            svalue(svycluster.edit, index = TRUE) <- 1
-                            svalue(svystrata.edit, index = TRUE) <- 1
-                            svalue(svycluster.edit, index = TRUE) <- 1
-                            svalue(svyfpc.edit, index = TRUE) <- 1
-                            delete(nonstandard.layout, svy.frame) 
-                            delete(nonstandard.layout, aov.frame)
-                          }
-                          if (svalue(h$obj) == "Designed Expt"){
-                            svalue(statusbar) <- "Experiments are not yet implemented."
-                            delete(nonstandard.layout, svy.frame)
-                            add(nonstandard.layout, aov.frame)
-                          }
-                          if (svalue(h$obj) == "Complex Survey"){
-                            svalue(statusbar) <- "survey structure currently only supports strata and 1-level cluster designs."
-                            add(nonstandard.layout, svy.frame)  
-                          }
-                        })
-  size(d.s.list) <- c(100,20)
+  d.s.list <- glabel(ifelse(!is.null(tag(e$obj, "design")), "Complex Survey", "Standard"))
   main.layout[3, 4] <- d.s.label
-  main.layout[3, 5] <- d.s.list
+  main.layout[3, 5, anchor = c(-1, 0), expand = TRUE] <- d.s.list
+      
+  ## d.s.list <- gcombobox(c("Standard", "Complex Survey"),
+  ##                       handler = function(h, ...) {
+  ##                         if (svalue(h$obj) == "Standard") {
+  ##                           svalue(statusbar) <- "Use modeling framework to select lm/glm"
+  ##                           svalue(svycluster.edit, index = TRUE) <- 1
+  ##                           svalue(svystrata.edit, index = TRUE) <- 1
+  ##                           svalue(svycluster.edit, index = TRUE) <- 1
+  ##                           svalue(svyfpc.edit, index = TRUE) <- 1
+  ##                           delete(nonstandard.layout, svy.frame) 
+  ##                           delete(nonstandard.layout, aov.frame)
+  ##                         }
+  ##                         if (svalue(h$obj) == "Designed Expt"){
+  ##                           svalue(statusbar) <- "Experiments are not yet implemented."
+  ##                           delete(nonstandard.layout, svy.frame)
+  ##                           add(nonstandard.layout, aov.frame)
+  ##                         }
+  ##                         if (svalue(h$obj) == "Complex Survey"){
+  ##                           svalue(statusbar) <- "survey structure currently only supports strata and 1-level cluster designs."
+  ##                           add(nonstandard.layout, svy.frame)  
+  ##                         }
+  ##                       })
+  ## size(d.s.list) <- c(100,20)
+
+  ## main.layout[3, 5] <- d.s.list
   
+
   
   nonstandard.layout <- ggroup(horizontal = FALSE)
   main.layout[1:10, 7:9] <- nonstandard.layout
@@ -360,55 +366,55 @@ modelFitting = function(e) {
   ## extra arguments for glm end
   
   ## complex survey 
-  svydes.vec <- character(5)
-  svycluster.label <- glabel("Cluster")
-  svycluster.edit <- gcombobox(c("", "1", names(tag(modellingWin, "dataSet"))), 
-                               handler = function(h, ...){
-                                 if (svalue(svycluster.edit)=="") 
-                                   svydes.vec[1] <<- ""
-                                 else
-                                   svydes.vec[1] <<- paste0("id = ~",svalue(svycluster.edit))
-                               })
-  svystrata.label <-  glabel("Strata")
-  svystrata.edit <- gcombobox(c("", names(tag(modellingWin, "dataSet"))), 
-                              handler = function(h, ...){
-                                if (svalue(svystrata.edit)=="") 
-                                  svydes.vec[2] <<- ""
-                                else
-                                  svydes.vec[2] <<- paste0("strata = ~",svalue(svystrata.edit))
-                              })
+  ## svydes.vec <- character(5)
+  ## svycluster.label <- glabel("Cluster")
+  ## svycluster.edit <- gcombobox(c("", "1", names(tag(modellingWin, "dataSet"))), 
+  ##                              handler = function(h, ...){
+  ##                                if (svalue(svycluster.edit)=="") 
+  ##                                  svydes.vec[1] <<- ""
+  ##                                else
+  ##                                  svydes.vec[1] <<- paste0("id = ~",svalue(svycluster.edit))
+  ##                              })
+  ## svystrata.label <-  glabel("Strata")
+  ## svystrata.edit <- gcombobox(c("", names(tag(modellingWin, "dataSet"))), 
+  ##                             handler = function(h, ...){
+  ##                               if (svalue(svystrata.edit)=="") 
+  ##                                 svydes.vec[2] <<- ""
+  ##                               else
+  ##                                 svydes.vec[2] <<- paste0("strata = ~",svalue(svystrata.edit))
+  ##                             })
   
-  svyweights.label <- glabel("Weights")
-  svyweights.edit <- gcombobox(c("", names(tag(modellingWin, "dataSet"))), 
-                               handler = function(h, ...){
-                                 if (svalue(svyweights.edit)=="") 
-                                   svydes.vec[3] <<- ""
-                                 else
-                                   svydes.vec[3] <<- paste0("weights = ~",svalue(svyweights.edit))
-                               })
+  ## svyweights.label <- glabel("Weights")
+  ## svyweights.edit <- gcombobox(c("", names(tag(modellingWin, "dataSet"))), 
+  ##                              handler = function(h, ...){
+  ##                                if (svalue(svyweights.edit)=="") 
+  ##                                  svydes.vec[3] <<- ""
+  ##                                else
+  ##                                  svydes.vec[3] <<- paste0("weights = ~",svalue(svyweights.edit))
+  ##                              })
   
-  svyfpc.label <- glabel("fpc") 
-  svyfpc.edit <- gcombobox(c("", names(tag(modellingWin, "dataSet"))), 
-                           handler = function(h, ...){
-                             if (svalue(svyfpc.edit)=="") 
-                               svydes.vec[4] <<- ""
-                             else
-                               svydes.vec[4] <<- paste0("fpc = ~",svalue(svyfpc.edit))
-                           })
-  svyextra.button <- gbutton("More", handler = function(h,...) {
-    svalue(statusbar) <- "For more complex survey design and provide this functionality in the future."
-  })
+  ## svyfpc.label <- glabel("fpc") 
+  ## svyfpc.edit <- gcombobox(c("", names(tag(modellingWin, "dataSet"))), 
+  ##                          handler = function(h, ...){
+  ##                            if (svalue(svyfpc.edit)=="") 
+  ##                              svydes.vec[4] <<- ""
+  ##                            else
+  ##                              svydes.vec[4] <<- paste0("fpc = ~",svalue(svyfpc.edit))
+  ##                          })
+  ## svyextra.button <- gbutton("More", handler = function(h,...) {
+  ##   svalue(statusbar) <- "For more complex survey design and provide this functionality in the future."
+  ## })
   
-  svynest.label <- glabel("Nest")
-  svynest.box <- gcheckbox(checked = FALSE, handler = function(h, ...) {
-    if (!svalue(svynest.box)) 
-      svydes.vec[5] <<- paste0("nest = ", FALSE)
-    else
-      svydes.vec[5] <<- paste0("nest = ", TRUE)
+  ## svynest.label <- glabel("Nest")
+  ## svynest.box <- gcheckbox(checked = FALSE, handler = function(h, ...) {
+  ##   if (!svalue(svynest.box)) 
+  ##     svydes.vec[5] <<- paste0("nest = ", FALSE)
+  ##   else
+  ##     svydes.vec[5] <<- paste0("nest = ", TRUE)
     
-  })
+  ## })
   
-  #svycnest.label <- glabel("Nested in Strata")
+  #Svycnest.label <- glabel("Nested in Strata")
   #svycnest.box <- gcheckbox(checked = TRUE, handler = function(h, ...) {
     #if (svalue(svycnest.box)) 
      # svydes.vec[6] <<- paste0("check.strata = ", TRUE)
@@ -417,25 +423,25 @@ modelFitting = function(e) {
     
   #})
   
-  svy.design <- NULL
-  svy.frame <- gframe("survey design")
-  gsvy.frame <- ggroup(container = svy.frame)
-  size(gsvy.frame) <- c(200, 250)
-  svy.layout <- glayout(container = gsvy.frame)
-  svy.layout[1, 1, anchor =c(0, 0)] <- svycluster.label
-  svy.layout[1, 2, anchor =c(0, 0), expand = TRUE] <- svycluster.edit
-  size(svycluster.edit) <- c(100,20)
-  svy.layout[2, 1, anchor =c(0, 0)] <- svystrata.label
-  svy.layout[2, 2, anchor =c(0, 0), expand = TRUE] <- svystrata.edit
-  svy.layout[3, 1, anchor =c(0, 0)] <- svyweights.label
-  svy.layout[3, 2, anchor =c(0, 0), expand = TRUE] <- svyweights.edit
-  svy.layout[4, 1, anchor =c(0, 0)] <- svyfpc.label
-  svy.layout[4, 2, anchor =c(0, 0)] <- svyfpc.edit
-  svy.layout[5, 1, anchor =c(0, 0)] <- svynest.label
-  svy.layout[5, 2, anchor =c(0, 0)] <- svynest.box
-  #svy.layout[6, 1, anchor =c(0, 0)] <- svycnest.label
-  #svy.layout[6, 2, anchor =c(0, 0)] <- svycnest.box
-  svy.layout[6, 2, anchor =c(0, 0), expand = TRUE] <- svyextra.button
+  ## svy.design <- NULL
+  ## svy.frame <- gframe("survey design")
+  ## gsvy.frame <- ggroup(container = svy.frame)
+  ## size(gsvy.frame) <- c(200, 250)
+  ## svy.layout <- glayout(container = gsvy.frame)
+  ## svy.layout[1, 1, anchor =c(0, 0)] <- svycluster.label
+  ## svy.layout[1, 2, anchor =c(0, 0), expand = TRUE] <- svycluster.edit
+  ## size(svycluster.edit) <- c(100,20)
+  ## svy.layout[2, 1, anchor =c(0, 0)] <- svystrata.label
+  ## svy.layout[2, 2, anchor =c(0, 0), expand = TRUE] <- svystrata.edit
+  ## svy.layout[3, 1, anchor =c(0, 0)] <- svyweights.label
+  ## svy.layout[3, 2, anchor =c(0, 0), expand = TRUE] <- svyweights.edit
+  ## svy.layout[4, 1, anchor =c(0, 0)] <- svyfpc.label
+  ## svy.layout[4, 2, anchor =c(0, 0)] <- svyfpc.edit
+  ## svy.layout[5, 1, anchor =c(0, 0)] <- svynest.label
+  ## svy.layout[5, 2, anchor =c(0, 0)] <- svynest.box
+  ## #svy.layout[6, 1, anchor =c(0, 0)] <- svycnest.label
+  ## #svy.layout[6, 2, anchor =c(0, 0)] <- svycnest.box
+  ## svy.layout[6, 2, anchor =c(0, 0), expand = TRUE] <- svyextra.button
   
   
   ## complex survey end
@@ -850,12 +856,12 @@ modelFitting = function(e) {
       target.design = "experiment"
     
     
-    svy.design <<- fitDesign(svydes.vec, dataset.name.f)
+    svy.design <<- tag(e$obj, "design")  ##fitDesign(svydes.vec, dataset.name.f)
     if (target.design == "survey") {
       code.history <<- c(code.history,
                          paste("svy.design", paste0(deparse(svy.design$call),collapse = " "), sep = " = "))
     }
-    current.fit <- fitModel(y, x, data = dataset.name.f, 
+    current.fit <- fitModel(y, x, data = if (target.design == "survey") tag(e$obj, "design") else dataset.name.f, 
                             family = target.family, 
                             design = target.design)
     
@@ -1133,8 +1139,10 @@ modelFitting = function(e) {
         else
           result = try(capture.output(eval(parse(text = paste("iNZightSummary(", listOfModels[modelIndex], ")", collapse = "")))))
         #result = try(capture.output(eval(parse(text = paste("with(tag(modellingWin, \"dataSet\"), iNZightSummary(", listOfModels[modelIndex], "))", collapse = "")))))
-        if (class(result)[1] == "try-error")
-          svalue(statusbar) <- result
+        if (class(result)[1] == "try-error") {
+            print(result)
+            svalue(statusbar) <- result
+        }
         #gmessage(title = "ERROR", message = "No output produced.\nCheck current model for errors", icon = "error", container = TRUE, parent = modellingWin)
         else {
           svalue(statusbar) <- "Model fitting successful!"
