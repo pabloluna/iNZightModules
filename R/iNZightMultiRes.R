@@ -31,11 +31,11 @@ iNZightMultiRes <- setRefClass(
 
     methods = list(
         initialize = function(GUI) {
-            
+
             initFields(GUI = GUI, plotSet = list(), objName = "response", guessName = TRUE,
                        mrObject = NULL)
             activeData <<- GUI$getActiveData()
-            
+
 
             # ==========
             # top panel
@@ -48,12 +48,12 @@ iNZightMultiRes <- setRefClass(
                     icon = "error", title = "No Binary Variables", parent = GUI$win)
                 return(NULL)
             }
-            
-            
+
+
             GUI$initializeModuleWindow(.self)
             mainGrp <<- gvbox(spacing = 10, container = GUI$moduleWindow, expand = TRUE)
             mainGrp$set_borderwidth(5)
-            
+
             ## --- Plot Toolbar
             aboutBtn <- gimage(stock.id = "about", size = "button")
             addHandlerClicked(aboutBtn, function(h, ...) {
@@ -84,7 +84,7 @@ iNZightMultiRes <- setRefClass(
                                             "we aren't aware of. Please report these to us so we can solve them:\n")
                                   txtAb <- gtext(text = aboutText, width = 380, height = NULL)
                                   add(gAb, txtAb, expand = TRUE)
-                                  
+
                                   lab <- gbutton("Contact iNZight Support")
                                   font(lab) <- list(color = "navy", weight = "bold")
                                   addHandlerClicked(lab, function(h, ...)
@@ -111,12 +111,12 @@ iNZightMultiRes <- setRefClass(
             mid <<- glayout(container = mainGrp, expand = FALSE)
             addSpring(mainGrp)
             bot <- ggroup(container = mainGrp)
-            
+
             lab <- glabel("Select related variables:")
             font(lab) <- list(weight = "bold", size = 11)
             add(top, lab, anchor = c(-1, -1))
-            
-            
+
+
             vars <<- names(activeData)
             gtab <<- gtable(vars[binaryVar], multiple = TRUE, container = top)
             names(gtab) <<- "VARIABLES"
@@ -146,7 +146,7 @@ iNZightMultiRes <- setRefClass(
                 }, one.shot = TRUE)
             })
 
-            
+
             ## summary button
             sumButton = gbutton("Summary", handler = function(h,...) {
                 s1 = svalue(G1box, index = TRUE)
@@ -178,12 +178,12 @@ iNZightMultiRes <- setRefClass(
                 }
             })
             enabled(comButton) = FALSE
-            
+
             btnGrp <- ggroup(container = top)
             add(btnGrp, sumButton, expand = TRUE, fill = TRUE)
             add(btnGrp, comButton, expand = TRUE, fill = TRUE)
 
-            
+
             # =============
             # mid panel
             # =============
@@ -191,7 +191,7 @@ iNZightMultiRes <- setRefClass(
             ## --------------------------------------------------  SLIDERS
             G1box <- gcombobox(c("Select Subset Variable 1", vars))
             G2box <- gcombobox(c("Select Subset Variable 2", vars))
-            
+
             mid[1, 1:5, anchor = c(0, 0), expand = TRUE] <<- G1box
             mid[3, 1:5, anchor = c(0, 0), expand = TRUE] <<- G2box
 
@@ -265,7 +265,7 @@ iNZightMultiRes <- setRefClass(
                         visible(sideChk) <- enabled(sideChk) <- svalue(G2box, index = TRUE) > 1
                         enabled(comButton) <- FALSE
                     }
-                    
+
                 })
 
             ## slider 2
@@ -308,25 +308,25 @@ iNZightMultiRes <- setRefClass(
 
 
             ## --- Buttons at bottom of window - SUMMARY | COMBINATIONS || HELP | HOME
-            
 
 
-            helpButton <- gbutton("Help", 
+
+            helpButton <- gbutton("Help",
                                   handler = function(h, ...) {
                                       browseURL("https://www.stat.auckland.ac.nz/~wild/iNZight/user_guides/add_ons/?topic=multiple_response")
                                   })
-            homeButton <- gbutton("Home", 
+            homeButton <- gbutton("Home",
                                 handler = function(h, ...) {
                                     ## delete the module window
                                     delete(GUI$leftMain, GUI$leftMain$children[[2]])
                                     ## display the default view (data, variable, etc.)
                                     GUI$plotToolbar$restore()
                                     visible(GUI$gp1) <<- TRUE
-                                })        
-            
+                                })
+
             add(bot, helpButton, expand = TRUE, fill = TRUE)
             add(bot, homeButton, expand = TRUE, fill = TRUE)
-            
+
 
             visible(GUI$moduleWindow) <<- TRUE
 
@@ -356,7 +356,7 @@ iNZightMultiRes <- setRefClass(
         createSlider = function(pos, dropdata) {
             ## not working yet ...
             return(NULL)
-            
+
             ## make sure there is no slider at the pos
             deleteSlider(pos)
 
@@ -455,14 +455,14 @@ iNZightMultiRes <- setRefClass(
             if (length(responseID) == 1) {
                 mrObject <<- NULL
                 updatePlot()
-                
+
                 return(NULL)
             }
-            
+
             responseVars <- binaryVar[responseID]
 
             frm <- as.formula(paste(objName, "~", paste(vars[responseVars], collapse = " + ")))
-            
+
             mrObject <<- iNZightMR::iNZightMR(frm, data = activeData, Labels = substrsplit)
             if (mrObject$Labels$Commonstr != objName && guessName) {
                 if (!(objName == "response" && mrObject$Labels$Commonstr == "")) {
@@ -471,14 +471,14 @@ iNZightMultiRes <- setRefClass(
                     return(NULL)
                 }
             }
-                
+
             updatePlot()
         },
         ## create an MR object and plot it
         updatePlot = function() {
 
             if (is.null(mrObject)) return(NULL)
-            
+
             if (is.null(plotSet$g1)) {
                 mro <- iNZightMR::mroPara(mrObject)
             } else if (is.null(plotSet$g2)) {
@@ -493,7 +493,7 @@ iNZightMultiRes <- setRefClass(
             }
 
             iNZightMR::barplotMR(mro)
-            
+
         },
         ## summary window
         summaryWindow = function(text, mode) {
