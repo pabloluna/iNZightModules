@@ -17,18 +17,18 @@ iNZightTSMod <- setRefClass(
         mainGrp     = "ANY",
         activeData  = "data.frame",
         timeVar     = "ANY",
-        patternType = "numeric",
+        patternType = "numeric", smoothness = "numeric",
         tsObj       = "ANY",
-        yLab        = "ANY", xLab        = "ANY",
-        decompose   = "logical",
+        yLab        = "ANY", xLab = "ANY",
         plottype    = "numeric",
-        compare     = "logical",
+        compare     = "numeric",
+        recomposeBtn = "ANY", recomposeResBtn = "ANY", decomp = "ANY",
         forecastBtn = "ANY", forecasts   = "ANY"
     ),
     methods = list(
         initialize = function(GUI) {
-            initFields(GUI = GUI, patternType = 1,
-                       decompose = FALSE, plottype = 1, compare = TRUE)
+            initFields(GUI = GUI, patternType = 1, smoothness = 0.7, tsObj = NULL,
+                       plottype = 1, compare = 1)
             
             dat = GUI$getActiveData()
             activeData <<- tsData(dat)
@@ -38,8 +38,8 @@ iNZightTSMod <- setRefClass(
             mainGrp <<- gvbox(spacing = 10, container = GUI$moduleWindow, expand = TRUE)
             mainGrp$set_borderwidth(5)
 
-            playBtn <- iNZight:::gimagebutton(stock.id = "media-play", handler = function(h, ...) updatePlot(animate = TRUE))
-            GUI$plotToolbar$update(NULL, refresh = "updatePlot", extra = list(playBtn))
+            ## playBtn <- iNZight:::gimagebutton(stock.id = "media-play", handler = function(h, ...) updatePlot(animate = TRUE))
+            GUI$plotToolbar$update(NULL, refresh = "updatePlot")#, extra = list(playBtn))
 
             ################
             ###  fields  ###
@@ -51,15 +51,15 @@ iNZightTSMod <- setRefClass(
             #################################
             g1 = gframe("Time Information", pos = 0.5, horizontal = FALSE,
                         container = mainGrp)
-            g2 = gframe("Seasonal Pattern", pos = 0.5, horizontal = FALSE,
+            g2 = gframe("Model Settings", pos = 0.5, horizontal = FALSE,
                         container = mainGrp)
             addSpring(mainGrp)
+
+            midGrp <- ggroup(container = mainGrp, fill = TRUE)
             g3 = gframe("Series Variables", pos = 0.5, horizontal = FALSE,
-                        container = mainGrp, fill = TRUE)
-            
+                        container = midGrp, fill = TRUE)
             g5 = gframe("Plot Type Options", pos = 0.5, horizontal = FALSE,
-                        container = mainGrp)
-            size(g5) <- c(100, 80)
+                        container = midGrp, fill = TRUE, expand = TRUE)
             
             g4 = gframe("Customize Labels", pos = 0.5, horizontal = FALSE,
                         container = mainGrp)
@@ -75,9 +75,9 @@ iNZightTSMod <- setRefClass(
             frames = getToolkitWidget(mainGrp)$getChildren()
             mainGrp$set_rgtk2_font(frames[[1]]$getChildren()[[2]], frameFont)
             mainGrp$set_rgtk2_font(frames[[2]]$getChildren()[[2]], frameFont)
-            mainGrp$set_rgtk2_font(frames[[4]]$getChildren()[[2]], frameFont)
+            midGrp$set_rgtk2_font(getToolkitWidget(midGrp)$getChildren()[[1]]$getChildren()[[2]], frameFont)
+            midGrp$set_rgtk2_font(getToolkitWidget(midGrp)$getChildren()[[2]]$getChildren()[[2]], frameFont)
             mainGrp$set_rgtk2_font(frames[[5]]$getChildren()[[2]], frameFont)
-            mainGrp$set_rgtk2_font(frames[[6]]$getChildren()[[2]], frameFont)
 
             ############
             ###  g1  ###
@@ -142,7 +142,7 @@ iNZightTSMod <- setRefClass(
             ############
             ###  g2  ###
             ############
-            g2_layout = glayout(container = g2)
+            g2_layout = glayout(container = g2, spacing = 5)
             g2_opt1   = gradio(c("Multiplicative", "Additive"), selected = patternType,
                                horizontal = TRUE,
                                handler = function(h, ...) {
@@ -150,7 +150,18 @@ iNZightTSMod <- setRefClass(
                                    updatePlot()
                                })
 
-            g2_layout[1, 1, expand = TRUE] = g2_opt1
+            g2_layout[1, 1, anchor = c(1, 0), expand = TRUE] <- glabel("Seasonal pattern :")
+            g2_layout[1, 2, expand = TRUE] = g2_opt1
+
+            ## Smoother
+            smth <- gslider(0, 1, by = 0.1, value = smoothness,
+                            handler = function(h, ...) {
+                                smoothness <<- svalue(h$obj)
+                                updatePlot()
+                            })
+            
+            g2_layout[2, 1, anchor = c(1, 0), expand = TRUE] <- glabel("Smoothness :")
+            g2_layout[2, 2, fill = TRUE, expand = TRUE] <- smth
 
             ############
             ###  g3  ###
@@ -161,11 +172,15 @@ iNZightTSMod <- setRefClass(
             g3_layout = glayout(container = g3)
             g3_opt1 = gtable(names(activeData)[-getTime(activeData)],
                              multiple = TRUE)
-            size(g3_opt1) <- c(100, 150)
+            size(g3_opt1) <- c(150, 200)
             g3_layout[1, 1, expand = TRUE] = g3_opt1
 
             addHandlerSelectionChanged(g3_opt1, function(h, ...) {
-                if (length(svalue(g3_opt1)) == 0) return()
+                if (length(svalue(g3_opt1)) == 0) {
+                    visible(novar) <- TRUE
+                    return()
+                }
+                visible(novar) <- FALSE
                 
                 ## make dataset an iNZightTS object
                 var_ind <- which(names(activeData) %in% svalue(h$obj))
@@ -187,23 +202,38 @@ iNZightTSMod <- setRefClass(
 
             onevar <- gvbox(container = g5)
             addSpring(onevar)
-            plotType <- gradio(c("Standard", "Season", "Forecast"), selected = plottype,
-                               horizontal = TRUE, container = onevar, expand = TRUE,
+            plotType <- gradio(c("Standard", "Decomposition", "Seasonal", "Forecast"), selected = plottype,
+                               container = onevar, expand = TRUE,
                                handler = function(h, ...) {
                                    plottype <<- svalue(h$obj, index = TRUE)
-                                   visible(decompBtn) <- plottype == 1
-                                   visible(forecastBtn) <<- FALSE ## plottype == 3
+                                   visible(recomposeBtn) <<- FALSE
+                                   visible(recomposeResBtn) <<- FALSE
+                                   visible(forecastBtn) <<- FALSE
                                    updatePlot()
                                })
-
-            decompBtn <- gbutton("Decompose", container = onevar,
-                                 handler = function(h, ...) {
-                                     decompose <<- !decompose
-                                     blockHandlers(h$obj)
-                                     svalue(h$obj) <- ifelse(decompose, "Re-compose", "Decompose")
-                                     unblockHandlers(h$obj)
-                                     updatePlot()
-                                 })
+            
+            recomposeBtn <<- gbutton("Recompose", container = onevar,
+                                     handler = function(h, ...) {
+                                         iNZightTools::newdevice(width = 6, height = 8)
+                                         decomp <<- decompositionplot(tsObj, multiplicative = (patternType == 1),
+                                                                          xlab = svalue(xLab), ylab = svalue(yLab))
+                                         iNZightTS::recompose(decomp)
+                                     })
+            visible(recomposeBtn) <<- FALSE
+            recomposeResBtn <<- gbutton("Recompose Result", container = onevar)
+            addHandlerClicked(recomposeResBtn, function(h, ...) {
+                blockHandlers(h$obj)
+                if (svalue(h$obj) == "Re-decompose") {
+                    updatePlot()
+                    svalue(recomposeResBtn) <<- "Recompose Result"
+                } else {
+                    iNZightTS::recompose(decomp, animate = FALSE)
+                    svalue(recomposeResBtn) <<- "Re-decompose"
+                }
+                unblockHandlers(h$obj)
+            })
+            visible(recomposeResBtn) <<- FALSE
+            
             forecastBtn <<- gbutton("Forecasted Values", container = onevar,
                                     handler = function(h, ...) {
                                         w <- gwindow("Time Series Forecasts", parent = GUI$win,
@@ -216,15 +246,22 @@ iNZightTSMod <- setRefClass(
             visible(forecastBtn) <<- FALSE
 
             multivar <- ggroup(container = g5)
-            compareChk <- gcheckbox("Draw each variable in the same plot", checked = compare,
-                                    container = multivar,
-                                    handler = function(h, ...) {
-                                        compare <<- svalue(h$obj)
-                                        updatePlot()
-                                    })
-
+            compareChk <- gradio(c("Single graph",
+                                   "Separate graphs"),
+                                 checked = compare,
+                                 container = multivar,
+                                 handler = function(h, ...) {
+                                     compare <<- svalue(h$obj, index = TRUE)
+                                     updatePlot()
+                                 })
+            
             visible(onevar) <- FALSE
             visible(multivar) <- FALSE
+
+            novar <- gvbox(container = g5)
+            glabel("Select a Variable.", container = novar)
+            lb <- glabel("(Hold CTRL to select multiple)", container = novar)
+            font(lb) <- list(size = 8)
             
             
 
@@ -234,18 +271,19 @@ iNZightTSMod <- setRefClass(
             g4_layout = glayout(container = g4)
             g4_lab1   = glabel("x-axis")
             g4_lab2   = glabel("y-axis")
-            yLab <<- gedit(timeVar)
-            xLab <<- gedit("")
+            xLab <<- gedit(timeVar)
+            yLab <<- gedit("")
 
-            size(xLab) <<- c(150, 21)
-            size(yLab) <<- c(150, 21)
+            #size(xLab) <<- c(150, 21)
+            #size(yLab) <<- c(150, 21)
 
             g4_layout[1, 1:2, expand = TRUE, anchor = c(-1, 0)] = g4_lab1
             g4_layout[2, 1:2, expand = TRUE, anchor = c(-1, 0)] = g4_lab2
-            g4_layout[1, 3, expand = TRUE] = yLab
-            g4_layout[2, 3, expand = TRUE] = xLab
+            g4_layout[1, 3, expand = TRUE] = xLab
+            g4_layout[2, 3, expand = TRUE] = yLab
 
-
+            ## timers for change on keystroke
+            
 
             btmGrp <- ggroup(container = mainGrp)
 
@@ -255,14 +293,14 @@ iNZightTSMod <- setRefClass(
                                       browseURL("https://www.stat.auckland.ac.nz/~wild/iNZight/user_guides/add_ons/?topic=time_series")
                                   })
             homeButton <- gbutton("Home", expand = TRUE, fill = TRUE,
-                                cont = btmGrp,
-                                handler = function(h, ...) {
-                                    ## delete the module window
-                                    delete(GUI$leftMain, GUI$leftMain$children[[2]])
-                                    ## display the default view (data, variable, etc.)
-                                    GUI$plotToolbar$restore()
-                                    visible(GUI$gp1) <<- TRUE
-                                })
+                                  cont = btmGrp,
+                                  handler = function(h, ...) {
+                                      ## delete the module window
+                                      delete(GUI$leftMain, GUI$leftMain$children[[2]])
+                                      ## display the default view (data, variable, etc.)
+                                      GUI$plotToolbar$restore()
+                                      visible(GUI$gp1) <<- TRUE
+                                  })
 
             visible(GUI$moduleWindow) <<- TRUE
         },
@@ -312,33 +350,36 @@ iNZightTSMod <- setRefClass(
             if (animate) gmessage("Animation not yet implemented :(")
             animate <- FALSE
 
+            decomp <<- NULL
             forecasts <<- NULL
 
             if (is.null(tsObj)) {
                 cat("Nothing to plot ...\n")
                 plot.new()
             } else if (inherits(tsObj, "iNZightMTS")) { ## multiple vars
-                if (compare)
-                    compareplot(tsObj, multiplicative = (patternType == 1), ylab = svalue(yLab))
-                else
-                    multiseries(tsObj, multiplicative = (patternType == 1), ylab = svalue(yLab))
+                switch(compare,
+                       compareplot(tsObj, multiplicative = (patternType == 1), ylab = svalue(yLab)),
+                       multiseries(tsObj, multiplicative = (patternType == 1), ylab = svalue(yLab)))
             } else { ## single var
                 switch(plottype, {
                     ## 1 >> standard plot
-                    if (decompose) {
-                        cat("Draw decomposed plot ...\n")
-                        plot.new()
-                    } else {
-                        ## patternType = 1 >> 'multiplicative'; 2 >> 'additive'
-                        iNZightTS::rawplot(tsObj, multiplicative = (patternType == 1),
-                                           ylab = svalue(yLab), xlab = svalue(xLab), animate = animate)
-                    }
+                    ## patternType = 1 >> 'multiplicative'; 2 >> 'additive'
+                    iNZightTS::rawplot(tsObj, multiplicative = (patternType == 1),
+                                       ylab = svalue(yLab), xlab = svalue(xLab), animate = animate)
                 }, {
-                    ## 2 >> season plot
-                    iNZightTS::seasonplot(tsObj, multiplicative = (patternType == 1))
+                    ## 2 >> decomposed plot
+                    decomp <<- iNZightTS::decompositionplot(tsObj, multiplicative = (patternType == 1),
+                                                            xlab = svalue(xLab), ylab = svalue(yLab))
+                    visible(recomposeBtn) <<- TRUE
+                    visible(recomposeResBtn) <<- TRUE
                 }, {
-                    ## 3 >> forecast plot
-                    forecasts <<- iNZightTS::forecastplot(tsObj, multiplicative = (patternType == 1))
+                    ## 3 >> season plot
+                    iNZightTS::seasonplot(tsObj, multiplicative = (patternType == 1),
+                                          xlab = svalue(xLab), ylab = svalue(yLab))
+                }, {
+                    ## 4 >> forecast plot
+                    forecasts <<- iNZightTS::forecastplot(tsObj, multiplicative = (patternType == 1),
+                                                          ylab = svalue(yLab))
                     visible(forecastBtn) <<- TRUE
                 })
                        
