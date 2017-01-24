@@ -15,19 +15,31 @@ iNZightTSMod <- setRefClass(
     fields = list(
         GUI         = "ANY",
         mainGrp     = "ANY",
-        activeData = "data.frame"
+        activeData  = "data.frame",
+        timeVar     = "ANY",
+        patternType = "numeric",
+        tsObj       = "ANY",
+        yLab        = "character",
+        xLab        = "character",
+        decompose   = "logical",
+        seasonplot  = "logical",
+        forecast    = "logical"
     ),
     methods = list(
         initialize = function(GUI) {
-            initFields(GUI = GUI)
+            initFields(GUI = GUI, patternType = 1, xLab = "",
+                       decompose = FALSE, seasonplot = FALSE, forecast = FALSE)
+            
             dat = GUI$getActiveData()
             activeData <<- tsData(dat)
+            timeVar <<- getTime(activeData, index = FALSE)
+            yLab <<- timeVar
 
             GUI$initializeModuleWindow(.self)
             mainGrp <<- gvbox(spacing = 10, container = GUI$moduleWindow, expand = TRUE)
             mainGrp$set_borderwidth(5)
 
-            playBtn <- iNZight:::gimagebutton(stock.id = "media-play")
+            playBtn <- iNZight:::gimagebutton(stock.id = "media-play", handler = function(h, ...) updatePlot(animate = TRUE))
             GUI$plotToolbar$update(NULL, refresh = "updatePlot", extra = list(playBtn))
 
             ################
@@ -68,12 +80,18 @@ iNZightTSMod <- setRefClass(
             g1_layout = glayout(container = g1)
             g1_opt1   = gradio(c("Select time variable", "Provide time manually"),
                                selected = 1, horizontal = FALSE)
-            g1_layout[1, 1, expand = TRUE] = g1_opt1
+            g1_layout[1, 1:2, expand = TRUE] = g1_opt1
 
             ## FOR LAYOUT A
             g1a_layout = glayout(container = g1)
             ## g1a options
-            g1a_opt1   = gcombobox(names(activeData), selected = getTime(activeData))
+
+            g1a_opt1   = gcombobox(names(activeData),
+                                   selected = 1, #match(timeVar, names(activeData)),
+                                   handler = function(h, ...) {
+                                       timeVar <<- svalue(h$obj)
+                                       updatePlot()
+                                   })
             ## g1a labels
             g1a_lab1   = glabel("Select time variable:")
             ## g1a layout
@@ -81,26 +99,28 @@ iNZightTSMod <- setRefClass(
             g1a_layout[2, 2, expand = TRUE]   = g1a_opt1
 
             ## FOR LAYOUT B
-            g1b_layout = glayout(container = g1)
-            visible(g1b_layout) = FALSE
-            ## g1b options
-            g1b_opt1  = gedit("")
-            g1b_opt2  = gedit("")
-            g1b_opt3  = gedit("")
-            size(g1b_opt1) = c(120, 21)
-            size(g1b_opt2) = c(120, 21)
-            size(g1b_opt3) = c(120, 21)
-            ## g1b labels
-            g1b_lab1  = glabel("Specify start date:")
-            g1b_lab2  = glabel("Specify season:")
-            g1b_lab3  = glabel("Specify frequency:")
-            ## g1b layout
-            g1b_layout[2, 1, expand = TRUE, anchor = c(-1, 0)] = g1b_lab1
-            g1b_layout[3, 1, expand = TRUE, anchor = c(-1, 0)] = g1b_lab2
-            g1b_layout[4, 1, expand = TRUE, anchor = c(-1, 0)] = g1b_lab3
-            g1b_layout[2, 2, expand = TRUE] = g1b_opt1
-            g1b_layout[3, 2, expand = TRUE] = g1b_opt2
-            g1b_layout[4, 2, expand = TRUE] = g1b_opt3
+            g1b_layout <- glabel("Not implemented yet.", container = g1)
+            visible(g1b_layout) <- FALSE
+            ## g1b_layout = glayout(container = g1)
+            ## visible(g1b_layout) = FALSE
+            ## ## g1b options
+            ## g1b_opt1  = gedit("")
+            ## g1b_opt2  = gedit("")
+            ## g1b_opt3  = gedit("")
+            ## size(g1b_opt1) = c(120, 21)
+            ## size(g1b_opt2) = c(120, 21)
+            ## size(g1b_opt3) = c(120, 21)
+            ## ## g1b labels
+            ## g1b_lab1  = glabel("Specify start date:")
+            ## g1b_lab2  = glabel("Specify season:")
+            ## g1b_lab3  = glabel("Specify frequency:")
+            ## ## g1b layout
+            ## g1b_layout[2, 1, expand = TRUE, anchor = c(-1, 0)] = g1b_lab1
+            ## g1b_layout[3, 1, expand = TRUE, anchor = c(-1, 0)] = g1b_lab2
+            ## g1b_layout[4, 1, expand = TRUE, anchor = c(-1, 0)] = g1b_lab3
+            ## g1b_layout[2, 2, expand = TRUE] = g1b_opt1
+            ## g1b_layout[3, 2, expand = TRUE] = g1b_opt2
+            ## g1b_layout[4, 2, expand = TRUE] = g1b_opt3
 
             addHandlerChanged(g1_opt1, handler = function(h,...) {
                 if (svalue(h$obj, index = TRUE) == 1) {
@@ -117,8 +137,12 @@ iNZightTSMod <- setRefClass(
             ###  g2  ###
             ############
             g2_layout = glayout(container = g2)
-            g2_opt1   = gradio(c("Multiplicative", "Additive"), selected = 1,
-                               horizontal = TRUE)
+            g2_opt1   = gradio(c("Multiplicative", "Additive"), selected = patternType,
+                               horizontal = TRUE,
+                               handler = function(h, ...) {
+                                   patternType <<- svalue(h$obj, index = TRUE)
+                                   updatePlot()
+                               })
 
             g2_layout[1, 1, expand = TRUE] = g2_opt1
 
@@ -140,8 +164,8 @@ iNZightTSMod <- setRefClass(
             g4_layout = glayout(container = g4)
             g4_lab1   = glabel("x-axis")
             g4_lab2   = glabel("y-axis")
-            g4_opt1   = gedit(getTime(activeData, index = FALSE))
-            g4_opt2   = gedit("")
+            g4_opt1   = gedit(yLab)
+            g4_opt2   = gedit(xLab)
 
             size(g4_opt1) = c(150, 21)
             size(g4_opt2) = c(150, 21)
@@ -180,16 +204,18 @@ iNZightTSMod <- setRefClass(
 
             ## Automate plotting!
             addHandlerSelectionChanged(g3_opt1, function(h, ...) {
-                if (length(svalue(g3_opt1)) == 0) {
-                    gmessage("At least one series variable must be selected")
-                    return()
-                }
+                if (length(svalue(g3_opt1)) == 0) return()
 
                 ## make dataset an iNZightTS object
-                var_ind <- which(svalue(h$obj) == names(activeData))
-                ts.obj <- iNZightTS(data  = activeData, var = var_ind)
-                rawplot(ts.obj, ylab = svalue(g4_opt1), xlab = svalue(g4_opt2),
-                        animate = FALSE)
+                var_ind <- which(names(activeData) %in% svalue(h$obj))
+                if (length(var_ind) == 1) {
+                    tsObj <<- iNZightTS(data = activeData, var = var_ind)
+                } else {
+                    tsObj <<- NULL
+                }
+                updatePlot()
+
+                ## 
             })
 
 
@@ -266,8 +292,17 @@ iNZightTSMod <- setRefClass(
         },
 
         ## draw the plot, depending on the settings
-        updatePlot = function() {
-            plot(1:10)
+        updatePlot = function(animate = FALSE) {
+            ## plot the TS object setup by the GUI
+
+            if (animate) gmessage("Animation not yet implemented :(")
+            animate <- FALSE
+            
+            cat("Drawing a plot now ...\n")
+            if (!is.null(tsObj)) {
+                rawplot(tsObj, ylab = yLab, xlab = xLab, animate = animate)
+            }
+            
         }
     )
 )
