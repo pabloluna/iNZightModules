@@ -17,7 +17,8 @@ iNZightTSMod <- setRefClass(
         mainGrp     = "ANY",
         activeData  = "data.frame",
         timeVar     = "ANY",
-        patternType = "numeric", smoothness = "numeric",
+        patternType = "numeric",
+        smthSlider  = "ANY", smoothness = "numeric",
         tsObj       = "ANY",
         yLab        = "ANY", xLab = "ANY",
         plottype    = "numeric",
@@ -154,14 +155,14 @@ iNZightTSMod <- setRefClass(
             g2_layout[1, 2, expand = TRUE] = g2_opt1
 
             ## Smoother
-            smth <- gslider(0, 1, by = 0.05, value = smoothness,
-                            handler = function(h, ...) {
-                                smoothness <<- svalue(h$obj)
-                                updatePlot()
-                            })
+            smthSlider <<- gslider(0, 1, by = 0.05, value = smoothness,
+                                   handler = function(h, ...) {
+                                       smoothness <<- svalue(h$obj)
+                                       updatePlot()
+                                   })
             
             g2_layout[2, 1, anchor = c(1, 0), expand = TRUE] <- glabel("Smoothness :")
-            g2_layout[2, 2, fill = TRUE, expand = TRUE] <- smth
+            g2_layout[2, 2, fill = TRUE, expand = TRUE] <- smthSlider
 
             ############
             ###  g3  ###
@@ -353,38 +354,44 @@ iNZightTSMod <- setRefClass(
             decomp <<- NULL
             forecasts <<- NULL
 
+            can.smooth <- TRUE
+            smooth.t <- smoothness * 2000
+
             if (is.null(tsObj)) {
                 cat("Nothing to plot ...\n")
                 plot.new()
             } else if (inherits(tsObj, "iNZightMTS")) { ## multiple vars
                 switch(compare,
-                       compareplot(tsObj, multiplicative = (patternType == 1), ylab = svalue(yLab)),
-                       multiseries(tsObj, multiplicative = (patternType == 1), ylab = svalue(yLab)))
+                       compareplot(tsObj, multiplicative = (patternType == 1), ylab = svalue(yLab), t = smooth.t),
+                       multiseries(tsObj, multiplicative = (patternType == 1), ylab = svalue(yLab), t = smooth.t))
             } else { ## single var
                 switch(plottype, {
                     ## 1 >> standard plot
                     ## patternType = 1 >> 'multiplicative'; 2 >> 'additive'
                     iNZightTS::rawplot(tsObj, multiplicative = (patternType == 1),
-                                       ylab = svalue(yLab), xlab = svalue(xLab), animate = animate)
+                                       ylab = svalue(yLab), xlab = svalue(xLab), animate = animate, t = smooth.t)
                 }, {
                     ## 2 >> decomposed plot
                     decomp <<- iNZightTS::decompositionplot(tsObj, multiplicative = (patternType == 1),
                                                             xlab = svalue(xLab), ylab = svalue(yLab),
-                                                            t = smoothness * 2000)
+                                                            t = smooth.t)
                     visible(recomposeBtn) <<- TRUE
                     visible(recomposeResBtn) <<- TRUE
                 }, {
                     ## 3 >> season plot
                     iNZightTS::seasonplot(tsObj, multiplicative = (patternType == 1),
-                                          xlab = svalue(xLab), ylab = svalue(yLab))
+                                          xlab = svalue(xLab), ylab = svalue(yLab), t = smooth.t)
                 }, {
                     ## 4 >> forecast plot
                     forecasts <<- iNZightTS::forecastplot(tsObj, multiplicative = (patternType == 1),
                                                           ylab = svalue(yLab))
                     visible(forecastBtn) <<- TRUE
+                    can.smooth <- FALSE
                 })
                        
             }
+
+            enabled(smthSlider) <<- can.smooth
             
         }
     )
