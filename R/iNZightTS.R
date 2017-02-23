@@ -27,7 +27,7 @@ iNZightTSMod <- setRefClass(
     ),
     methods = list(
         initialize = function(GUI) {
-            initFields(GUI = GUI, patternType = 1, smoothness = 0.7, tsObj = NULL,
+            initFields(GUI = GUI, patternType = 1, smoothness = 0.1, tsObj = NULL,
                        plottype = 1, compare = 1)
             
             dat = GUI$getActiveData()
@@ -154,7 +154,7 @@ iNZightTSMod <- setRefClass(
             g2_layout[1, 2, expand = TRUE] = g2_opt1
 
             ## Smoother
-            smth <- gslider(0, 1, by = 0.1, value = smoothness,
+            smth <- gslider(0, 1, by = 0.05, value = smoothness,
                             handler = function(h, ...) {
                                 smoothness <<- svalue(h$obj)
                                 updatePlot()
@@ -369,7 +369,8 @@ iNZightTSMod <- setRefClass(
                 }, {
                     ## 2 >> decomposed plot
                     decomp <<- iNZightTS::decompositionplot(tsObj, multiplicative = (patternType == 1),
-                                                            xlab = svalue(xLab), ylab = svalue(yLab))
+                                                            xlab = svalue(xLab), ylab = svalue(yLab),
+                                                            t = smoothness * 2000)
                     visible(recomposeBtn) <<- TRUE
                     visible(recomposeResBtn) <<- TRUE
                 }, {
