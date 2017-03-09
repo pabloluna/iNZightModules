@@ -155,7 +155,7 @@ iNZightTSMod <- setRefClass(
             g2_layout[1, 2, expand = TRUE] = g2_opt1
 
             ## Smoother
-            smthSlider <<- gslider(0, 1, by = 0.05, value = smoothness,
+            smthSlider <<- gslider(0, 100, by = 0.1, value = smoothness,
                                    handler = function(h, ...) {
                                        smoothness <<- svalue(h$obj)
                                        updatePlot()
@@ -355,7 +355,7 @@ iNZightTSMod <- setRefClass(
             forecasts <<- NULL
 
             can.smooth <- TRUE
-            smooth.t <- smoothness * 2000
+            smooth.t <- smoothness
 
             if (is.null(tsObj)) {
                 cat("Nothing to plot ...\n")
