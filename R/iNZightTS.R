@@ -28,7 +28,7 @@ iNZightTSMod <- setRefClass(
     ),
     methods = list(
         initialize = function(GUI) {
-            initFields(GUI = GUI, patternType = 1, smoothness = 0.1, tsObj = NULL,
+            initFields(GUI = GUI, patternType = 1, smoothness = 10, tsObj = NULL,
                        plottype = 1, compare = 1)
             
             dat = GUI$getActiveData()
@@ -275,6 +275,9 @@ iNZightTSMod <- setRefClass(
             xLab <<- gedit(timeVar)
             yLab <<- gedit("")
 
+            addHandlerKeystroke(xLab, function(h, ...) updatePlot())
+            addHandlerKeystroke(yLab, function(h, ...) updatePlot())
+
             #size(xLab) <<- c(150, 21)
             #size(yLab) <<- c(150, 21)
 
@@ -283,7 +286,14 @@ iNZightTSMod <- setRefClass(
             g4_layout[1, 3, expand = TRUE] = xLab
             g4_layout[2, 3, expand = TRUE] = yLab
 
-            ## timers for change on keystroke
+            clearXlab <- iNZight:::gimagebutton(stock.id = "reset", handler = function(h, ...) {
+                svalue(xLab) <<- timeVar
+            })
+            g4_layout[1, 4] <- clearXlab
+            clearYlab <- iNZight:::gimagebutton(stock.id = "reset", handler = function(h, ...) {
+                svalue(yLab) <<- ""
+            })
+            g4_layout[2, 4] <- clearYlab
             
 
             btmGrp <- ggroup(container = mainGrp)
@@ -362,8 +372,10 @@ iNZightTSMod <- setRefClass(
                 plot.new()
             } else if (inherits(tsObj, "iNZightMTS")) { ## multiple vars
                 switch(compare,
-                       compareplot(tsObj, multiplicative = (patternType == 1), ylab = svalue(yLab), t = smooth.t),
-                       multiseries(tsObj, multiplicative = (patternType == 1), ylab = svalue(yLab), t = smooth.t))
+                       compareplot(tsObj, multiplicative = (patternType == 1),
+                                   xlab = svalue(xLab), ylab = svalue(yLab), t = smooth.t),
+                       multiseries(tsObj, multiplicative = (patternType == 1),
+                                   xlab = svalue(xLab), ylab = svalue(yLab), t = smooth.t))
             } else { ## single var
                 switch(plottype, {
                     ## 1 >> standard plot
@@ -384,7 +396,7 @@ iNZightTSMod <- setRefClass(
                 }, {
                     ## 4 >> forecast plot
                     forecasts <<- iNZightTS::forecastplot(tsObj, multiplicative = (patternType == 1),
-                                                          ylab = svalue(yLab))
+                                                          xlab = svalue(xLab), ylab = svalue(yLab))
                     visible(forecastBtn) <<- TRUE
                     can.smooth <- FALSE
                 })
