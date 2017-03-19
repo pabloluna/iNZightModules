@@ -23,6 +23,7 @@ iNZightTSMod <- setRefClass(
         yLab        = "ANY", xLab = "ANY",
         plottype    = "numeric",
         compare     = "numeric",
+        animateBtn  = "ANY", 
         recomposeBtn = "ANY", recomposeResBtn = "ANY", decomp = "ANY",
         forecastBtn = "ANY", forecasts   = "ANY"
     ),
@@ -94,9 +95,10 @@ iNZightTSMod <- setRefClass(
             ## g1a options
 
             g1a_opt1   = gcombobox(names(activeData),
-                                   selected = 1, #match(timeVar, names(activeData)),
+                                   selected = match(timeVar, names(activeData)),
                                    handler = function(h, ...) {
                                        timeVar <<- svalue(h$obj)
+                                       print(timeVar)
                                        updatePlot()
                                    })
             ## g1a labels
@@ -171,7 +173,7 @@ iNZightTSMod <- setRefClass(
             ##   need to change the variable selection widget for when there
             ##   are many variables which will expand the widget.
             g3_layout = glayout(container = g3)
-            g3_opt1 = gtable(names(activeData)[-getTime(activeData)],
+            g3_opt1 = gtable(names(activeData)[! names(activeData) %in% timeVar],
                              multiple = TRUE)
             size(g3_opt1) <- c(150, 200)
             g3_layout[1, 1, expand = TRUE] = g3_opt1
@@ -192,7 +194,8 @@ iNZightTSMod <- setRefClass(
                     visible(onevar) <- FALSE
                     visible(multivar) <- TRUE
                 }
-                tsObj <<- iNZightTS::iNZightTS(data = activeData, var = var_ind)
+                tsObj <<- iNZightTS::iNZightTS(data = activeData, var = var_ind,
+                                               time.col = which(colnames(activeData) == timeVar))
                 updatePlot()
             })
 
@@ -207,11 +210,20 @@ iNZightTSMod <- setRefClass(
                                container = onevar, expand = TRUE,
                                handler = function(h, ...) {
                                    plottype <<- svalue(h$obj, index = TRUE)
+                                   visible(animateBtn) <<- svalue(h$obj, TRUE) == 1
                                    visible(recomposeBtn) <<- FALSE
                                    visible(recomposeResBtn) <<- FALSE
                                    visible(forecastBtn) <<- FALSE
                                    updatePlot()
                                })
+
+            animateBtn <<- gbutton("Animate", container = onevar,
+                                   handler = function(h, ...) {
+                                       iNZightTools::newdevice()
+                                       iNZightTS::rawplot(tsObj, multiplicative = (patternType == 1),
+                                                          ylab = svalue(yLab), xlab = svalue(xLab), animate = TRUE, t = smoothness)
+                                   })
+            ## visible(animateBtn) <<- plottype == "Standard"
             
             recomposeBtn <<- gbutton("Recompose", container = onevar,
                                      handler = function(h, ...) {
@@ -313,7 +325,11 @@ iNZightTSMod <- setRefClass(
                                       visible(GUI$gp1) <<- TRUE
                                   })
 
+            ## Make the module visible
             visible(GUI$moduleWindow) <<- TRUE
+
+            ## IF time series variable is chosen, plot first variable.
+            svalue(g3_opt1, index = TRUE) <- 1
         },
 
         # ========
@@ -324,8 +340,9 @@ iNZightTSMod <- setRefClass(
             ## look for time or date
             time_re = "([Tt][Ii][Mm][Ee])|([Dd][Aa][Tt][Ee])"
             ind     = grep(time_re, names(data))
-            if (index) { return(ind) }
-            else       { return(names(data)[ind]) }
+            if (index) return(ind) 
+            else if (length(ind) == 0) return(NA)
+            else return(names(data)[ind])
         },
 
         ## checks for a time variable in dataset
@@ -336,22 +353,24 @@ iNZightTSMod <- setRefClass(
         ## drops categorical variables (except the time variable)
         tsData = function(data) {
             time_index = getTime(data)
-            index      = numeric()
-            ## find non-numeric variables and
-            ## store their indices in "index"
-            for (i in 1:ncol(data)) {
-                if (i != time_index) {
-                    if (!is.numeric(data[, i])) {
-                        index = c(index, i)
-                    }
-                }
-            }
-            ## drop the "index" from dataset
-            if (length(index) != 0) {
-                data[, -index]
-            } else {
-                data
-            }
+
+            data[, c(time_index, which(sapply(data, is.numeric)))]
+            ## index      = numeric()
+            ## ## find non-numeric variables and
+            ## ## store their indices in "index"
+            ## for (i in 1:ncol(data)) {
+            ##     if (i != time_index) {
+            ##         if (!is.numeric(data[, i])) {
+            ##             index = c(index, i)
+            ##         }
+            ##     }
+            ## }
+            ## ## drop the "index" from dataset
+            ## if (length(index) != 0) {
+            ##     data[, -index]
+            ## } else {
+            ##     data
+            ## }
         },
 
         ## draw the plot, depending on the settings
