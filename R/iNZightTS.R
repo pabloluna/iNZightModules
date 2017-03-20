@@ -23,7 +23,7 @@ iNZightTSMod <- setRefClass(
         yLab        = "ANY", xLab = "ANY",
         plottype    = "numeric",
         compare     = "numeric",
-        animateBtn  = "ANY", 
+        animateBtn  = "ANY",
         recomposeBtn = "ANY", recomposeResBtn = "ANY", decomp = "ANY",
         forecastBtn = "ANY", forecasts   = "ANY"
     ),
@@ -31,7 +31,7 @@ iNZightTSMod <- setRefClass(
         initialize = function(GUI) {
             initFields(GUI = GUI, patternType = 1, smoothness = 10, tsObj = NULL,
                        plottype = 1, compare = 1)
-            
+
             dat = GUI$getActiveData()
             activeData <<- tsData(dat)
             timeVar <<- getTime(activeData, index = FALSE)
@@ -62,7 +62,7 @@ iNZightTSMod <- setRefClass(
                         container = midGrp, fill = TRUE)
             g5 = gframe("Plot Type Options", pos = 0.5, horizontal = FALSE,
                         container = midGrp, fill = TRUE, expand = TRUE)
-            
+
             g4 = gframe("Customize Labels", pos = 0.5, horizontal = FALSE,
                         container = mainGrp)
 
@@ -108,28 +108,28 @@ iNZightTSMod <- setRefClass(
             g1a_layout[2, 2, expand = TRUE]   = g1a_opt1
 
             ## FOR LAYOUT B
-            g1b_layout <- glabel("Not implemented yet.", container = g1)
-            visible(g1b_layout) <- FALSE
-            ## g1b_layout = glayout(container = g1)
-            ## visible(g1b_layout) = FALSE
-            ## ## g1b options
-            ## g1b_opt1  = gedit("")
-            ## g1b_opt2  = gedit("")
-            ## g1b_opt3  = gedit("")
-            ## size(g1b_opt1) = c(120, 21)
-            ## size(g1b_opt2) = c(120, 21)
-            ## size(g1b_opt3) = c(120, 21)
-            ## ## g1b labels
-            ## g1b_lab1  = glabel("Specify start date:")
-            ## g1b_lab2  = glabel("Specify season:")
-            ## g1b_lab3  = glabel("Specify frequency:")
-            ## ## g1b layout
-            ## g1b_layout[2, 1, expand = TRUE, anchor = c(-1, 0)] = g1b_lab1
-            ## g1b_layout[3, 1, expand = TRUE, anchor = c(-1, 0)] = g1b_lab2
-            ## g1b_layout[4, 1, expand = TRUE, anchor = c(-1, 0)] = g1b_lab3
-            ## g1b_layout[2, 2, expand = TRUE] = g1b_opt1
-            ## g1b_layout[3, 2, expand = TRUE] = g1b_opt2
-            ## g1b_layout[4, 2, expand = TRUE] = g1b_opt3
+            # g1b_layout <- glabel("Not implemented yet.", container = g1)
+            # visible(g1b_layout) <- FALSE
+            g1b_layout = glayout(container = g1)
+            visible(g1b_layout) = FALSE
+            ## g1b options
+            g1b_opt1  = gedit("")
+            g1b_opt2  = gedit("")
+            g1b_opt3  = gedit("")
+            size(g1b_opt1) = c(120, 21)
+            size(g1b_opt2) = c(120, 21)
+            size(g1b_opt3) = c(120, 21)
+            ## g1b labels
+            g1b_lab1  = glabel("Specify start date:")
+            g1b_lab2  = glabel("Specify season:")
+            g1b_lab3  = glabel("Specify frequency:")
+            ## g1b layout
+            g1b_layout[2, 1, expand = TRUE, anchor = c(-1, 0)] = g1b_lab1
+            g1b_layout[3, 1, expand = TRUE, anchor = c(-1, 0)] = g1b_lab2
+            g1b_layout[4, 1, expand = TRUE, anchor = c(-1, 0)] = g1b_lab3
+            g1b_layout[2, 2, expand = TRUE] = g1b_opt1
+            g1b_layout[3, 2, expand = TRUE] = g1b_opt2
+            g1b_layout[4, 2, expand = TRUE] = g1b_opt3
 
             addHandlerChanged(g1_opt1, handler = function(h,...) {
                 if (svalue(h$obj, index = TRUE) == 1) {
@@ -162,7 +162,7 @@ iNZightTSMod <- setRefClass(
                                        smoothness <<- svalue(h$obj)
                                        updatePlot()
                                    })
-            
+
             g2_layout[2, 1, anchor = c(1, 0), expand = TRUE] <- glabel("Smoothness :")
             g2_layout[2, 2, fill = TRUE, expand = TRUE] <- smthSlider
 
@@ -175,7 +175,7 @@ iNZightTSMod <- setRefClass(
             g3_layout = glayout(container = g3)
             g3_opt1 = gtable(names(activeData)[! names(activeData) %in% timeVar],
                              multiple = TRUE)
-            size(g3_opt1) <- c(150, 200)
+            size(g3_opt1) <- c(floor(size(GUI$leftMain)[1] * 0.5), 200)
             g3_layout[1, 1, expand = TRUE] = g3_opt1
 
             addHandlerSelectionChanged(g3_opt1, function(h, ...) {
@@ -184,7 +184,7 @@ iNZightTSMod <- setRefClass(
                     return()
                 }
                 visible(novar) <- FALSE
-                
+
                 ## make dataset an iNZightTS object
                 var_ind <- which(names(activeData) %in% svalue(h$obj))
                 if (length(var_ind) == 1) {
@@ -219,17 +219,16 @@ iNZightTSMod <- setRefClass(
 
             animateBtn <<- gbutton("Animate", container = onevar,
                                    handler = function(h, ...) {
-                                       iNZightTools::newdevice()
+                                    #    iNZightTools::newdevice()
                                        iNZightTS::rawplot(tsObj, multiplicative = (patternType == 1),
                                                           ylab = svalue(yLab), xlab = svalue(xLab), animate = TRUE, t = smoothness)
                                    })
-            ## visible(animateBtn) <<- plottype == "Standard"
-            
+
             recomposeBtn <<- gbutton("Recompose", container = onevar,
                                      handler = function(h, ...) {
-                                         iNZightTools::newdevice(width = 6, height = 8)
+                                        #  iNZightTools::newdevice(width = 6, height = 8)
                                          decomp <<- decompositionplot(tsObj, multiplicative = (patternType == 1),
-                                                                          xlab = svalue(xLab), ylab = svalue(yLab))
+                                                                          xlab = svalue(xLab), ylab = svalue(yLab), t = smoothness)
                                          iNZightTS::recompose(decomp)
                                      })
             visible(recomposeBtn) <<- FALSE
@@ -246,7 +245,7 @@ iNZightTSMod <- setRefClass(
                 unblockHandlers(h$obj)
             })
             visible(recomposeResBtn) <<- FALSE
-            
+
             forecastBtn <<- gbutton("Forecasted Values", container = onevar,
                                     handler = function(h, ...) {
                                         w <- gwindow("Time Series Forecasts", parent = GUI$win,
@@ -267,7 +266,7 @@ iNZightTSMod <- setRefClass(
                                      compare <<- svalue(h$obj, index = TRUE)
                                      updatePlot()
                                  })
-            
+
             visible(onevar) <- FALSE
             visible(multivar) <- FALSE
 
@@ -275,8 +274,8 @@ iNZightTSMod <- setRefClass(
             glabel("Select a Variable.", container = novar)
             lb <- glabel("(Hold CTRL to select multiple)", container = novar)
             font(lb) <- list(size = 8)
-            
-            
+
+
 
             ############
             ###  g4  ###
@@ -306,7 +305,7 @@ iNZightTSMod <- setRefClass(
                 svalue(yLab) <<- ""
             })
             g4_layout[2, 4] <- clearYlab
-            
+
 
             btmGrp <- ggroup(container = mainGrp)
 
@@ -340,7 +339,7 @@ iNZightTSMod <- setRefClass(
             ## look for time or date
             time_re = "([Tt][Ii][Mm][Ee])|([Dd][Aa][Tt][Ee])"
             ind     = grep(time_re, names(data))
-            if (index) return(ind) 
+            if (index) return(ind)
             else if (length(ind) == 0) return(NA)
             else return(names(data)[ind])
         },
@@ -419,11 +418,11 @@ iNZightTSMod <- setRefClass(
                     visible(forecastBtn) <<- TRUE
                     can.smooth <- FALSE
                 })
-                       
+
             }
 
             enabled(smthSlider) <<- can.smooth
-            
+
         }
     )
 )
