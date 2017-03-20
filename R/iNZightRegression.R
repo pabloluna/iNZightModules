@@ -16,13 +16,19 @@ iNZightRegMod <- setRefClass(
         GUI         = "ANY",
         mainGrp     = "ANY",
         activeData  = "data.frame",
-        smryOut     = "ANY", smryInd = "numeric",
-        regPlots    = "ANY", plotInd = "numeric",
-        nbIndex     = "ANY"
+        smryOut     = "ANY",
+        regPlots    = "ANY",
+        showTab     = "function"
     ),
     methods = list(
         initialize = function(GUI) {
-            initFields(GUI = GUI)
+            initFields(GUI = GUI,
+                       showTab = function(x = c("plot", "summary")) {
+                           x <- match.arg(x)
+                           svalue(GUI$plotWidget$plotNb) <<-
+                               which(names(GUI$plotWidget$plotNb) ==
+                                     ifelse(x == "plot", "Model Plots", "Model Output"))
+                       })
 
             activeData <<- GUI$getActiveData()
 
@@ -47,15 +53,22 @@ iNZightRegMod <- setRefClass(
 
             helpButton <- gbutton("Help",
                                   handler = function(h, ...) {
-                                      browseURL("https://www.stat.auckland.ac.nz/~wild/iNZight/user_guides/add_ons/?topic=multiple_response")
+                                      browseURL("https://www.stat.auckland.ac.nz/~wild/iNZight/user_guides/add_ons/?topic=model_fitting")
                                   })
             homeButton <- gbutton("Home",
-                                handler = function(h, ...) {
-                                    ## delete the module window
-                                    delete(GUI$leftMain, GUI$leftMain$children[[2]])
-                                    ## display the default view (data, variable, etc.)
-                                    GUI$plotToolbar$restore()
-                                    visible(GUI$gp1) <<- TRUE
+                                  handler = function(h, ...) {
+                                      ## clean up tabs ...
+                                      showTab("plot")
+                                      GUI$plotWidget$closePlot()
+                                      GUI$plotWidget$addPlot()
+                                      showTab("summary")
+                                      GUI$plotWidget$closePlot()
+                                      
+                                      ## delete the module window
+                                      delete(GUI$leftMain, GUI$leftMain$children[[2]])
+                                      ## display the default view (data, variable, etc.)
+                                      GUI$plotToolbar$restore()
+                                      visible(GUI$gp1) <<- TRUE
                                 })
 
             add(bot, helpButton, expand = TRUE, fill = TRUE)
@@ -66,18 +79,19 @@ iNZightRegMod <- setRefClass(
 
 
             ## Now create new tab for SUMMARY output:
+            pb.i <- svalue(GUI$plotWidget$plotNb)
             smryOut <<- gtext("Regression model output...\n",
                               font.attr = list(weight = "bold"))
             add(GUI$plotWidget$plotNb, smryOut, label = "Model Output", close.button = FALSE)
-            smryInd <<- svalue(GUI$plotWidget$plotNb)
+            svalue(GUI$plotWidget$plotNb) <<- pb.i
+            GUI$plotWidget$closePlot()
 
             regPlots <<- ggraphics(expand = TRUE)
             add(GUI$plotWidget$plotNb, regPlots, label = "Model Plots", close.button = FALSE)
-            plotInd <<- svalue(GUI$plotWidget$plotNb)
             plot(1:10)
 
             ## So now, can swith between text and plot tabs ...
-            svalue(GUI$plotWidget$plotNb) <<- smryInd
+            showTab("summary")
 
             for (i in 1:5) {
                 insert(smryOut, paste0("\nModel ", i, ":"))
