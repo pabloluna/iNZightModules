@@ -23,7 +23,7 @@ iNZightTSMod <- setRefClass(
         yLab        = "ANY", xLab = "ANY",
         plottype    = "numeric",
         compare     = "numeric",
-        animateBtn  = "ANY",
+        animateBtn  = "ANY", pauseBtn = "ANY",
         recomposeBtn = "ANY", recomposeResBtn = "ANY", decomp = "ANY",
         forecastBtn = "ANY", forecasts   = "ANY"
     ),
@@ -217,12 +217,26 @@ iNZightTSMod <- setRefClass(
                                    updatePlot()
                                })
 
-            animateBtn <<- gbutton("Animate", container = onevar,
-                                   handler = function(h, ...) {
-                                    #    iNZightTools::newdevice()
-                                       iNZightTS::rawplot(tsObj, multiplicative = (patternType == 1),
-                                                          ylab = svalue(yLab), xlab = svalue(xLab), animate = TRUE, t = smoothness)
-                                   })
+            tsenv <- new.env()
+            assign("stopAnimation", FALSE, envir = tsenv)
+            runAnimation <- gaction("Animate", icon = "gtk-media-play",
+                                    handler = function(h, ...) {
+                                        assign("stopAnimation", FALSE, envir = tsenv)
+                                        enabled(animateBtn) <<- FALSE
+                                        enabled(pauseBtn) <<- TRUE
+                                        iNZightTS::rawplot(tsObj, multiplicative = (patternType == 1),
+                                                           ylab = svalue(yLab), xlab = svalue(xLab), animate = TRUE, t = smoothness,
+                                                           e = tsenv)
+                                        enabled(pauseBtn) <<- FALSE
+                                        enabled(animateBtn) <<- TRUE
+                                    })
+            pauseAnimation <- gaction("End Animation", icon = "gtk-media-stop",
+                                      handler = function(h, ...) {
+                                          assign("stopAnimation", TRUE, envir = tsenv)
+                                      })
+            animateBtn <<- gbutton(action = runAnimation, container = onevar)
+            pauseBtn <<- gbutton(action = pauseAnimation, container = onevar)
+            enabled(pauseBtn) <<- FALSE
 
             recomposeBtn <<- gbutton("Recompose", container = onevar,
                                      handler = function(h, ...) {
