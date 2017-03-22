@@ -245,7 +245,8 @@ iNZightTSMod <- setRefClass(
             g3_opt1 = gtable(names(activeData)[! names(activeData) %in% timeVar],
                              multiple = TRUE)
             size(g3_opt1) <- c(floor(size(GUI$leftMain)[1] * 0.5), 200)
-            g3_layout[1, 1, expand = TRUE] = g3_opt1
+            g3_layout[1, 1, anchor = c(-1, 0), expand = TRUE] <- glabel("Hold CTRL to select many")
+            g3_layout[2, 1, expand = TRUE] = g3_opt1
 
             addHandlerSelectionChanged(g3_opt1, function(h, ...) {
                 if (length(svalue(g3_opt1)) == 0) {
@@ -310,8 +311,10 @@ iNZightTSMod <- setRefClass(
                                       handler = function(h, ...) {
                                           assign("stopAnimation", TRUE, envir = tsenv)
                                       })
+
             animateBtn <<- gbutton(action = runAnimation, container = onevar)
-            pauseBtn <<- gbutton(action = pauseAnimation, container = onevar)
+            pauseBtn <<- gbutton(action = pauseAnimation)
+            if (.Platform$OS == "Windows") add(pauseBtn, onevar)
             enabled(pauseBtn) <<- FALSE
 
             recomposeBtn <<- gbutton("Recompose", container = onevar,
