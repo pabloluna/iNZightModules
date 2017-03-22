@@ -71,6 +71,7 @@ iNZightTSMod <- setRefClass(
             g2$set_borderwidth(8)
             g3$set_borderwidth(8)
             g4$set_borderwidth(8)
+
             g5$set_borderwidth(8)
 
             ## bold-faced title for the frames

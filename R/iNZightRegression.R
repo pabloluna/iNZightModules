@@ -25,7 +25,7 @@ iNZightRegMod <- setRefClass(
         fit         = "ANY", summaryOutput = "character",
         fits        = "list",
         working     = "logical",
-        plottype    = "numeric"
+        plottype    = "numeric", showBoots = "ANY"
     ),
     methods = list(
         initialize = function(GUI) {
@@ -35,7 +35,7 @@ iNZightRegMod <- setRefClass(
             mainGrp <<- gvbox(spacing = 10, container = GUI$moduleWindow, expand = TRUE)
             mainGrp$set_borderwidth(5)
 
-            GUI$plotToolbar$update(NULL, refresh = NULL)
+            GUI$plotToolbar$update(NULL, refresh = "updatePlot")
 
             if (!is.null(GUI$moduledata) && !is.null(GUI$moduledata$regression) &&
                 !is.null(GUI$moduledata$regression$fits))
@@ -231,7 +231,7 @@ iNZightRegMod <- setRefClass(
             ## ---------------------------------------------------------------------------------------------------------
             ## Plot options
             
-            plotGp <- gexpandgroup("Plot Options", horizontal = FALSE, container = mainGrp)
+            plotGp <- gexpandgroup("Additional Options", horizontal = FALSE, container = mainGrp)
             plotGp$set_borderwidth(10)
             plotTbl <- glayout(homogeneous = TRUE, container = plotGp)
             ii <- 1
@@ -243,20 +243,33 @@ iNZightRegMod <- setRefClass(
                                           plottype <<- svalue(h$obj, index = TRUE)
                                           updatePlot()
                                       })
-            plotTbl[ii, 1, anchor = c(1, 0), expand = TRUE] <- lbl
-            plotTbl[ii, 2:3, expand = TRUE, fill = TRUE] <- plotTypeList
+            plotTbl[ii, 1:2, anchor = c(1, 0), expand = TRUE] <- lbl
+            plotTbl[ii, 3:6, expand = TRUE, fill = TRUE] <- plotTypeList
             ii <- ii + 1
 
-            lbl <- glabel("Normality Check :")
-            normcheckPlots <- gcombobox(c("Normal Q-Q", "Histogram", "Bootstrap Q-Q", "Bootstrap Histograms"),
-                                        handler = function(h, ...) {
-                                            plottype <<- svalue(h$obj, index = TRUE)
-                                            updatePlot()
-                                        })
-            plotTbl[ii, 1, anchor = c(1, 0), expand = TRUE] <- lbl
-            plotTbl[ii, 2:3, expand = TRUE, fill = TRUE] <- plotTypeList
+            showBoots <<- gcheckbox("Show bootstraps", checked = nrow(data()) >= 30 && nrow(data()) < 4000,
+                                    handler = function(h, ...) updatePlot())
+            plotTbl[ii, 3:6, anchor = c(-1, 0), fill = TRUE] <- showBoots
             ii <- ii + 1
-            
+
+
+            compMatrix <- gbutton("Comparison Matrix",
+                                  handler = function(h, ...) {
+
+                                  })
+            compPlot <- gbutton("Comparison Plot",
+                                handler = function(h, ...) {
+
+                                })
+            partialResPlot <- gbutton("Partial Residual Plot",
+                                      handler = function(h, ...) {
+
+                                      })
+            plotTbl[ii, 1:3, expand = TRUE, fill = TRUE] <- compMatrix
+            plotTbl[ii, 4:6, expand = TRUE, fill = TRUE] <- compPlot
+            ii <- ii + 1
+            plotTbl[ii, 4:6, expand = TRUE, fill = TRUE] <- partialResPlot
+            ii <- ii + 1
             
             
 
@@ -423,7 +436,19 @@ iNZightRegMod <- setRefClass(
             updatePlot()
         },
         updatePlot = function() {
-            iNZightRegression::plotlm6(fit, which = plottype)
+            if (plottype %in% 1:7) {
+                if (svalue(showBoots) && plottype %in% 5:6) {
+                    if (plottype == 5) {
+                        iNZightRegression::iNZightQQplot(fit)
+                    } else {
+                        iNZightRegression::histogramArray(fit)
+                    }
+                } else {
+                    iNZightRegression::plotlm6(fit, which = plottype, showBootstraps = svalue(showBoots))
+                }
+            } else {
+                plot(1:10)
+            }
         }
     )
 )
