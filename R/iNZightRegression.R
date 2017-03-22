@@ -21,6 +21,7 @@ iNZightRegMod <- setRefClass(
         variableList = "ANY",
         variables   = "character", explanatoryList = "ANY",
         confounding = "character", confounderList = "ANY",
+        modelName   = "ANY", modelList = "ANY",
         fit         = "ANY", summaryOutput = "character",
         fits        = "list",
         working     = "logical"
@@ -88,7 +89,7 @@ iNZightRegMod <- setRefClass(
 
 
 
-            variableGp <- gframe("Variables", horizontal = FALSE, container = mainGrp)
+            variableGp <- gframe("Explanatory Variables", horizontal = FALSE, container = mainGrp)
             variableGp$set_borderwidth(10)
             variableTbl <- glayout(homogeneous = TRUE, container = variableGp)
             
@@ -157,7 +158,80 @@ iNZightRegMod <- setRefClass(
                 confounding <<- confounding[confounding != svalue(h$obj)]
                 setConfVars()
             })
+
+
+
+            ## ---------------------------------------------------------------------------------------------------------
+            ## Model options
             
+            modelGp <- gframe("Model Options", horizontal = FALSE, container = mainGrp)
+            modelGp$set_borderwidth(10)
+            modelTbl <- glayout(homogeneous = TRUE, container = modelGp)
+            ii <- 1
+
+            lbl <- glabel("Select Model :")
+            modelList <<- gcombobox(if (length(fits) > 0) names(fits) else "(new)",
+                                    handler = function(h, ...) {
+                                        ## reset response, framework, variables ...
+                                        if (svalue(h$obj, index = TRUE) == 1) {
+                                            newBtn$invoke_change_handler()
+                                            return()
+                                        }
+                                        obj <- fits[[svalue(h$obj, index = TRUE) - 1]]
+                                        working <<- TRUE
+                                        svalue(responseBox) <- obj$response
+                                        svalue(responseTypeBox, index = TRUE) <- obj$responseType
+                                        variables <<- obj$variables
+                                        setExplVars()
+                                        confounding <<- obj$confounding
+                                        setConfVars()
+                                        svalue(modelName) <<- svalue(h$obj)
+                                        blockHandlers(saveBtn)
+                                        svalue(saveBtn) <- "Update"
+                                        unblockHandlers(saveBtn)
+                                        working <<- FALSE
+                                        fit <<- obj$fit
+                                        updateModel(new = FALSE)
+                                    })
+
+            newBtn <- gbutton("New",
+                              handler = function(h, ...) {
+                                  svalue(modelName) <<- paste("Model", length(fits) + 1)
+                                  blockHandlers(modelList)
+                                  svalue(modelList, index = TRUE) <<- 1
+                                  unblockHandlers(modelList)
+                                  blockHandlers(saveBtn)
+                                  svalue(saveBtn) <- "Save Model"
+                                  unblockHandlers(saveBtn)
+                              })
+            modelTbl[ii, 1, anchor = c(1, 0), expand = TRUE] <- lbl
+            modelTbl[ii, 2, expand = TRUE, fill = TRUE] <- modelList
+            modelTbl[ii, 3, expand = TRUE, fill = TRUE] <- newBtn
+            ii <- ii + 1
+
+            lbl <- glabel("Name :")
+            modelName <<- gedit(paste("Model", length(fits) + 1))
+            saveBtn <- gbutton("Save Model",
+                               handler = function(h, ...) {
+                                   updateModel(save = TRUE)
+                                   blockHandler(h$obj)
+                                   svalue(h$obj) <- "Update"
+                                   unblockHandler(h$obj)
+                               })
+            modelTbl[ii, 1, anchor = c(1, 0), expand = TRUE] <- lbl
+            modelTbl[ii, 2, expand = TRUE, fill = TRUE] <- modelName
+            modelTbl[ii, 3, expand = TRUE, fill = TRUE] <- saveBtn
+            ii <- ii + 1
+
+            #addHandlerKeystroke(modelName, handler = function(h, ...) {
+            #    if (svalue(modelList, index = TRUE) == 1) {
+            #        ## Creating a model
+            #    } else {
+            #        ## Updating a model
+            #        ## names(fits[[svalue(modelList, index = TRUE) - 1]]) <<- svalue(h$obj)
+            #    }
+            #    updateModel()
+            #})
             
 
             ## ---------------------------------------------------------------------------------------------------------
@@ -229,15 +303,25 @@ iNZightRegMod <- setRefClass(
         },
         data = function() GUI$getActiveData(),
         setAvailVars = function() {
-            if (is.null(response)) vars <- "Select response"
-            else vars <- names(data()[,-which(names(data()) == response)])
-            
+            if (is.null(response)) {
+                vars <- "Select response"
+            } else {
+                vars <- names(data()[,-which(names(data()) == response)])
+                if (length(variables) && response %in% variables) {
+                    variables <<- variables[variables != response]
+                    setExplVars()
+                }
+                if (length(confounding) && response %in% confounding) {
+                    confounding <<- confounding[confounding != response]
+                    setConfVars()
+                }
+            }
             variableList$set_items(structure(data.frame(vars, stringsAsFactors = FALSE),
-                                             names = "Available Variables"))
+                                             names = "Available Variables"))            
         },
         setExplVars = function () {
             explanatoryList$set_items(structure(data.frame(variables, stringsAsFactors = FALSE),
-                                                names = "Explanatory Variables"))
+                                                names = "Variables of Interest"))
             updateModel()
         },
         setConfVars = function() {
@@ -258,20 +342,47 @@ iNZightRegMod <- setRefClass(
         rule = function(char = "-") {
             addOutput("", paste0(rep(char, 80), collapse = ""), "")
         },
-        updateModel = function(save = FALSE) {
+        updateModel = function(new = TRUE, save = FALSE) {
             if (working) return()
-            dataset <- data()
-            fit <<- eval(parse(
-                text = iNZightTools::fitModel(response, paste(c(if (length(variables) > 0) variables else "1", confounding), collapse = " + "),
-                                              data = "dataset",
-                                              family = switch(responseType, "gaussian", "binomial", "poisson"))
-            ))
-            svalue(smryOut) <<- summaryOutput
-            addOutput(capture.output(iNZightRegression::iNZightSummary(fit, exclude = if (length(confounding) > 0) confounding else NULL)))
+
+            xexpr <- paste(c(if (length(variables) > 0) variables else "1", confounding), collapse = " + ")
+            if (new) {
+                dataset <- data()
+                mcall <- iNZightTools::fitModel(response, xexpr, data = "dataset",
+                                                family = switch(responseType, "gaussian", "binomial", "poisson"))
+                fit <<- try(eval(parse(text = mcall)), TRUE)
+            }
             
-            if (save) {
-                fits <<- c(fits, fit)
-                summaryOutput <<- svalue(smryOut)
+            modelname <- svalue(modelName)
+                
+
+            svalue(smryOut) <<- ""
+            addOutput(summaryOutput)
+            rule()
+
+            addOutput(paste0("# Summary of ", modelname, ": ", response, " ~ ", xexpr))
+            if (inherits(fit, "try-error")) {
+                addOutput("Unable to fit model.")
+            } else {
+                addOutput(capture.output(iNZightRegression::iNZightSummary(fit, exclude = if (length(confounding) > 0) confounding else NULL)))
+                
+                if (save) {
+                    obj <- list(fit = fit, response = response, responseType = responseType,
+                                variables = variables, confounding = confounding)
+                    if (svalue(modelList, index = TRUE) == 1) {
+                        ## Creating a new model
+                        fits <<- c(fits, structure(list(obj), .Names = modelname))
+                    } else {
+                        ## Updating an existing model
+                        fits[[svalue(modelList, index = TRUE) - 1]] <<- obj
+                        names(fits)[svalue(modelList, index = TRUE) - 1] <<- modelname
+                    }
+                    blockHandlers(modelList)
+                    modelList$set_items(c("(new)", names(fits)))
+                    svalue(modelList) <<- modelname
+                    unblockHandlers(modelList)
+                    summaryOutput <<- svalue(smryOut)
+                }
             }
             
             rule()
