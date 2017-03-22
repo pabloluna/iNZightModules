@@ -24,17 +24,22 @@ iNZightRegMod <- setRefClass(
         modelName   = "ANY", modelList = "ANY",
         fit         = "ANY", summaryOutput = "character",
         fits        = "list",
-        working     = "logical"
+        working     = "logical",
+        plottype    = "numeric"
     ),
     methods = list(
         initialize = function(GUI) {
-            initFields(GUI = GUI, working = TRUE)
+            initFields(GUI = GUI, working = TRUE, plottype = 1)
 
             GUI$initializeModuleWindow(.self)
             mainGrp <<- gvbox(spacing = 10, container = GUI$moduleWindow, expand = TRUE)
             mainGrp$set_borderwidth(5)
 
             GUI$plotToolbar$update(NULL, refresh = NULL)
+
+            if (!is.null(GUI$moduledata) && !is.null(GUI$moduledata$regression) &&
+                !is.null(GUI$moduledata$regression$fits))
+                fits <<- GUI$moduledata$regression$fits
 
             # addSpace(mainGrp, 15)
 
@@ -164,13 +169,13 @@ iNZightRegMod <- setRefClass(
             ## ---------------------------------------------------------------------------------------------------------
             ## Model options
             
-            modelGp <- gframe("Model Options", horizontal = FALSE, container = mainGrp)
+            modelGp <- gframe("Models", horizontal = FALSE, container = mainGrp)
             modelGp$set_borderwidth(10)
             modelTbl <- glayout(homogeneous = TRUE, container = modelGp)
             ii <- 1
 
             lbl <- glabel("Select Model :")
-            modelList <<- gcombobox(if (length(fits) > 0) names(fits) else "(new)",
+            modelList <<- gcombobox(c("(new)", names(fits)), ## if (length(fits) > 0) names(fits) else "(new)",
                                     handler = function(h, ...) {
                                         ## reset response, framework, variables ...
                                         if (svalue(h$obj, index = TRUE) == 1) {
@@ -223,15 +228,36 @@ iNZightRegMod <- setRefClass(
             modelTbl[ii, 3, expand = TRUE, fill = TRUE] <- saveBtn
             ii <- ii + 1
 
-            #addHandlerKeystroke(modelName, handler = function(h, ...) {
-            #    if (svalue(modelList, index = TRUE) == 1) {
-            #        ## Creating a model
-            #    } else {
-            #        ## Updating a model
-            #        ## names(fits[[svalue(modelList, index = TRUE) - 1]]) <<- svalue(h$obj)
-            #    }
-            #    updateModel()
-            #})
+            ## ---------------------------------------------------------------------------------------------------------
+            ## Plot options
+            
+            plotGp <- gexpandgroup("Plot Options", horizontal = FALSE, container = mainGrp)
+            plotGp$set_borderwidth(10)
+            plotTbl <- glayout(homogeneous = TRUE, container = plotGp)
+            ii <- 1
+
+            lbl <- glabel("Residual plots :")
+            plotTypeList <- gcombobox(c("Residual", "Scale-Location", "Leverage", "Cook's Distance",
+                                        "Normal Q-Q", "Histogram", "Summary Matrix"),
+                                      handler = function(h, ...) {
+                                          plottype <<- svalue(h$obj, index = TRUE)
+                                          updatePlot()
+                                      })
+            plotTbl[ii, 1, anchor = c(1, 0), expand = TRUE] <- lbl
+            plotTbl[ii, 2:3, expand = TRUE, fill = TRUE] <- plotTypeList
+            ii <- ii + 1
+
+            lbl <- glabel("Normality Check :")
+            normcheckPlots <- gcombobox(c("Normal Q-Q", "Histogram", "Bootstrap Q-Q", "Bootstrap Histograms"),
+                                        handler = function(h, ...) {
+                                            plottype <<- svalue(h$obj, index = TRUE)
+                                            updatePlot()
+                                        })
+            plotTbl[ii, 1, anchor = c(1, 0), expand = TRUE] <- lbl
+            plotTbl[ii, 2:3, expand = TRUE, fill = TRUE] <- plotTypeList
+            ii <- ii + 1
+            
+            
             
 
             ## ---------------------------------------------------------------------------------------------------------
@@ -245,6 +271,9 @@ iNZightRegMod <- setRefClass(
                                   })
             homeButton <- gbutton("Home",
                                   handler = function(h, ...) {
+                                      ## save fits
+                                      GUI$moduledata$regression <<- list(fits = fits)
+                                      
                                       ## clean up tabs ...
                                       showTab("plot")
                                       GUI$plotWidget$closePlot()
@@ -336,7 +365,7 @@ iNZightRegMod <- setRefClass(
                       ifelse(x == "plot", "Model Plots", "Model Output"))
         },
         addOutput = function(..., font.attr = list(family = "monospace")) {
-            showTab("summary")
+            ## showTab("summary")
             sapply(list(...), insert, obj = smryOut, font.attr = font.attr)
         },
         rule = function(char = "-") {
@@ -346,8 +375,8 @@ iNZightRegMod <- setRefClass(
             if (working) return()
 
             xexpr <- paste(c(if (length(variables) > 0) variables else "1", confounding), collapse = " + ")
+            dataset <- data()
             if (new) {
-                dataset <- data()
                 mcall <- iNZightTools::fitModel(response, xexpr, data = "dataset",
                                                 family = switch(responseType, "gaussian", "binomial", "poisson"))
                 fit <<- try(eval(parse(text = mcall)), TRUE)
@@ -364,7 +393,11 @@ iNZightRegMod <- setRefClass(
             if (inherits(fit, "try-error")) {
                 addOutput("Unable to fit model.")
             } else {
+                wd <- options()$width
+                options(width = 200)
                 addOutput(capture.output(iNZightRegression::iNZightSummary(fit, exclude = if (length(confounding) > 0) confounding else NULL)))
+                options(width = wd)
+                ## plot it
                 
                 if (save) {
                     obj <- list(fit = fit, response = response, responseType = responseType,
@@ -386,6 +419,11 @@ iNZightRegMod <- setRefClass(
             }
             
             rule()
+
+            updatePlot()
+        },
+        updatePlot = function() {
+            iNZightRegression::plotlm6(fit, which = plottype)
         }
     )
 )
