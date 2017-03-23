@@ -313,8 +313,7 @@ iNZightTSMod <- setRefClass(
                                       })
 
             animateBtn <<- gbutton(action = runAnimation, container = onevar)
-            pauseBtn <<- gbutton(action = pauseAnimation)
-            if (.Platform$OS == "windows") add(pauseBtn, onevar)
+            pauseBtn <<- gbutton(action = pauseAnimation, container = onevar)
             enabled(pauseBtn) <<- FALSE
 
             recomposeBtn <<- gbutton("Recompose", container = onevar,
