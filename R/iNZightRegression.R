@@ -41,8 +41,6 @@ iNZightRegMod <- setRefClass(
                 !is.null(GUI$moduledata$regression$fits))
                 fits <<- GUI$moduledata$regression$fits
 
-            # addSpace(mainGrp, 15)
-
             lbl1 <- glabel("Model Fitting Module")
             font(lbl1) <- list(weight = "bold",
                                family = "normal",
@@ -309,14 +307,21 @@ iNZightRegMod <- setRefClass(
 
 
             ## Now create new tab for SUMMARY output:
-            pb.i <- svalue(GUI$plotWidget$plotNb)
             smryOut <<- gtext()
-            add(GUI$plotWidget$plotNb, smryOut, label = "Model Output", close.button = FALSE)
-            svalue(GUI$plotWidget$plotNb) <<- pb.i
-            GUI$plotWidget$closePlot()
+            
+            if (GUI$popOut) {
+                smryWin <- gwindow(height = 600, width = 700)
+                add(smryWin, smryOut)
+            } else {
+                pb.i <- svalue(GUI$plotWidget$plotNb)
+                add(GUI$plotWidget$plotNb, smryOut, label = "Model Output", close.button = FALSE)
+                svalue(GUI$plotWidget$plotNb) <<- pb.i
+                GUI$plotWidget$closePlot()
+                
+                regPlots <<- ggraphics(expand = TRUE)
+                add(GUI$plotWidget$plotNb, regPlots, label = "Model Plots", close.button = FALSE)
+            }
 
-            regPlots <<- ggraphics(expand = TRUE)
-            add(GUI$plotWidget$plotNb, regPlots, label = "Model Plots", close.button = FALSE)
             plot(1:10)
 
             ## So now, can swith between text and plot tabs ...
@@ -436,18 +441,23 @@ iNZightRegMod <- setRefClass(
             updatePlot()
         },
         updatePlot = function() {
-            if (plottype %in% 1:7) {
-                if (svalue(showBoots) && plottype %in% 5:6) {
-                    if (plottype == 5) {
-                        iNZightRegression::iNZightQQplot(fit)
+            t <- try({
+                if (plottype %in% 1:7) {
+                    if (svalue(showBoots) && plottype %in% 5:6) {
+                        if (plottype == 5) {
+                            iNZightRegression::iNZightQQplot(fit)
+                        } else {
+                            iNZightRegression::histogramArray(fit)
+                        }
                     } else {
-                        iNZightRegression::histogramArray(fit)
+                        iNZightRegression::plotlm6(fit, which = plottype, showBootstraps = svalue(showBoots))
                     }
                 } else {
-                    iNZightRegression::plotlm6(fit, which = plottype, showBootstraps = svalue(showBoots))
+                    plot(1:10)
                 }
-            } else {
-                plot(1:10)
+            }, silent = TRUE)
+            if (inherits(t, "try-error")) {
+                plot.new()
             }
         }
     )
