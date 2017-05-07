@@ -19,7 +19,7 @@ iNZightRegMod <- setRefClass(
         regPlots    = "ANY",
         response    = "character", responseType = "numeric",
         variableList = "ANY",
-        variables   = "ANY", explanatoryList = "ANY",
+        variables   = "character", explanatoryList = "ANY",
         confounding = "character", confounderList = "ANY",
         modelName   = "ANY", modelList = "ANY",
         fit         = "ANY", summaryOutput = "character",
@@ -150,7 +150,7 @@ iNZightRegMod <- setRefClass(
             addHandlerDoubleclick(variableList, handler = function(h, ...) {
                 varname <- svalue(h$obj)
                 if (varname %in% c(variables, confounding)) return()
-                variables <<- c(variables, inzexp(varname))
+                variables <<- c(variables, (varname))
                 setExplVars()
             })
             addHandlerDoubleclick(explanatoryList, handler = function(h, ...) {
@@ -466,44 +466,44 @@ iNZightRegMod <- setRefClass(
 )
 
 ## METHODS
-inzexp <- function(x,
-                   transform =
-                       c("none", "power", "log", "square root", "polynomial"),
-                   arg = 2) {
-    transform <- match.arg(transform)
-    var <- switch(transform,
-                  "none" = {
-                      x
-                  },
-                  "power" = {
-                      if (!is.numeric(arg) || length(arg) != 1) stop("arg must be a numeric vector of length 1 for power transformations")
-                      structure(if (arg > 1) paste(x, arg, sep = "^") else x,
-                                transform = transform, arg = arg)
-                  })
-    attr(var, "variable") <- x
-    class(var) <- "inzexp"
-    var
-}
+## inzexp <- function(x,
+##                    transform =
+##                        c("none", "power", "log", "square root", "polynomial"),
+##                    arg = 2) {
+##     transform <- match.arg(transform)
+##     var <- switch(transform,
+##                   "none" = {
+##                       x
+##                   },
+##                   "power" = {
+##                       if (!is.numeric(arg) || length(arg) != 1) stop("arg must be a numeric vector of length 1 for power transformations")
+##                       structure(if (arg > 1) paste(x, arg, sep = "^") else x,
+##                                 transform = transform, arg = arg)
+##                   })
+##     attr(var, "variable") <- x
+##     class(var) <- "inzexp"
+##     var
+## }
 
-c.inzexp <- function(...) {
-    vars <- structure(list(...), class = "inzexp.list")
-}
-c.inzexp.list <- function(...) {
-    vars <- lapply(list(...), function(x)
-        if (class(x) == "inzexp") list(x) else unclass(x))
-    structure(do.call(c, vars), class = "inzexp.list")
-}
+## c.inzexp <- function(...) {
+##     vars <- structure(list(...), class = "inzexp.list")
+## }
+## c.inzexp.list <- function(...) {
+##     vars <- lapply(list(...), function(x)
+##         if (class(x) == "inzexp") list(x) else unclass(x))
+##     structure(do.call(c, vars), class = "inzexp.list")
+## }
 
-print.inzexp <- function(x, format = FALSE, ...) {
-    v <- as.character(x)
-    if (format) v <- paste0("I(", v, ")", collapse = " + ")
-    print(v)
-}
-print.inzexp.list <- function(x, format = FALSE, ...) {
-    vs <- sapply(unclass(x), unclass)
-    if (format) vs <- paste0("I(", vs, ")", collapse = " + ")
-    print(vs)
-}
+## print.inzexp <- function(x, format = FALSE, ...) {
+##     v <- as.character(x)
+##     if (format) v <- paste0("I(", v, ")", collapse = " + ")
+##     print(v)
+## }
+## print.inzexp.list <- function(x, format = FALSE, ...) {
+##     vs <- sapply(unclass(x), unclass)
+##     if (format) vs <- paste0("I(", vs, ")", collapse = " + ")
+##     print(vs)
+## }
 
 ## ## Tests
 ## x1 <- inzexp("height")
