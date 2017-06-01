@@ -852,9 +852,9 @@ iNZightMapMod <- setRefClass(
             if (!is.null(extra.args))
                 args <- c(args, extra.args)
 
-            do.call(plot, args)
+            pl <- do.call(plot, args)
 
-            return(invisible(NULL))
+            return(invisible(pl))
         }
     )
 
