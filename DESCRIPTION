@@ -21,7 +21,8 @@ Imports:
     iNZightMR,
     iNZightTS,
     gpairs,
-    methods
+    methods,
+	survey
 Suggests:
     iNZightMaps,
     rgl,
