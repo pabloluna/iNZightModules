@@ -98,7 +98,7 @@ iNZightRegMod <- setRefClass(
             variableGp$set_borderwidth(10)
             variableTbl <- glayout(homogeneous = TRUE, container = variableGp)
             
-            variableList <<- gtable("")
+            variableList <<- gtable("", multiple = TRUE)
             setAvailVars()
             variableTbl[1:3, 1, expand = TRUE] <- variableList
             size(variableList) <<- c(-1, 300)
@@ -113,7 +113,7 @@ iNZightRegMod <- setRefClass(
 
 
             ## Drag-and-drop behaviour
-            addDropSource(variableList, handler = function(h, ...) {
+            addDropSource(variableList, type="object",handler = function(h, ...) {
                 varname <- svalue(h$obj)
                 attr(varname, "from") <- "avail"
                 varname
@@ -137,13 +137,13 @@ iNZightRegMod <- setRefClass(
             
             addDropTarget(explanatoryList, handler =  function(h, ...) {
                 varname <- h$dropdata
-                if (varname %in% variables) return()
+                if (varname %in% c(variables, confounding)) return()
                 variables <<- c(variables, varname)
                 setExplVars()
             })
             addDropTarget(confounderList, handler = function(h, ...) {
                 varname <- h$dropdata
-                if (varname %in% confounding ) return()
+                if (varname %in% c(variables, confounding)) return()
                 confounding <<- c(confounding, varname)
                 setConfVars()
             })
@@ -151,15 +151,18 @@ iNZightRegMod <- setRefClass(
             ## double click behaviour
             addHandlerDoubleclick(variableList, handler = function(h, ...) {
                 varname <- svalue(h$obj)
+                if (length(varname) != 1) return()
                 if (varname %in% c(variables, confounding)) return()
                 variables <<- c(variables, varname)
                 setExplVars()
             })
             addHandlerDoubleclick(explanatoryList, handler = function(h, ...) {
+                if (length(svalue(h$obj)) != 1) return()
                 variables <<- variables[variables != svalue(h$obj)]
                 setExplVars()
             })
             addHandlerDoubleclick(confounderList, handler = function(h, ...) {
+                if (length(svalue(h$obj)) != 1) return()
                 confounding <<- confounding[confounding != svalue(h$obj)]
                 setConfVars()
             })
