@@ -94,11 +94,11 @@ iNZightRegMod <- setRefClass(
 
 
 
-            variableGp <- gframe("Explanatory Variables", horizontal = FALSE, container = mainGrp)
+            variableGp <- gframe("Explanatory Variables (drag+drop/double-click)", horizontal = FALSE, container = mainGrp)
             variableGp$set_borderwidth(10)
             variableTbl <- glayout(homogeneous = TRUE, container = variableGp)
             
-            variableList <<- gtable("", multiple = TRUE)
+            variableList <<- gtable("")#, multiple = TRUE)
             setAvailVars()
             variableTbl[1:3, 1, expand = TRUE] <- variableList
             size(variableList) <<- c(-1, 300)
@@ -111,7 +111,18 @@ iNZightRegMod <- setRefClass(
             setConfVars()
             variableTbl[3, 2, expand = TRUE] <- confounderList
 
-
+            ## Right-click menus
+            transforms <- list("I(x^2)", "log(x)", "sqrt(x)")
+            transformList <- lapply(transforms,
+                                    function(x) {
+                                        lbl <- x
+                                        if (grepl("I(", lbl, fixed = TRUE))
+                                            lbl <- gsub(")", "", gsub("I(", "", lbl, fixed = TRUE), fixed = TRUE)
+                                        gaction(lbl, handler = function(h, ...) addTransform(svalue(variableList, index = FALSE), x))
+                                    })
+            print(transformList)
+            addRightclickPopupMenu(variableList, transformList)
+            
             ## Drag-and-drop behaviour
             addDropSource(variableList, type="object",handler = function(h, ...) {
                 varname <- svalue(h$obj)
@@ -241,7 +252,7 @@ iNZightRegMod <- setRefClass(
 
             lbl <- glabel("Residual plots :")
             plotTypeList <- gcombobox(c("Residual", "Scale-Location", "Leverage", "Cook's Distance",
-                                        "Normal Q-Q", "Histogram", "Summary Matrix"),
+                                        "Normal Q-Q", "Histogram", "Summary Matrix", "Partial Residual"),
                                       handler = function(h, ...) {
                                           plottype <<- svalue(h$obj, index = TRUE)
                                           updatePlot()
@@ -264,15 +275,15 @@ iNZightRegMod <- setRefClass(
                                 handler = function(h, ...) {
 
                                 })
-            partialResPlot <- gbutton("Partial Residual Plot",
-                                      handler = function(h, ...) {
-
-                                      })
+            #partialResPlot <- gbutton("Partial Residual Plot",
+            #                          handler = function(h, ...) {
+            #
+            #})
             plotTbl[ii, 1:3, expand = TRUE, fill = TRUE] <- compMatrix
             plotTbl[ii, 4:6, expand = TRUE, fill = TRUE] <- compPlot
             ii <- ii + 1
-            plotTbl[ii, 4:6, expand = TRUE, fill = TRUE] <- partialResPlot
-            ii <- ii + 1
+            #plotTbl[ii, 4:6, expand = TRUE, fill = TRUE] <- partialResPlot
+            #ii <- ii + 1
             
             
 
@@ -374,6 +385,13 @@ iNZightRegMod <- setRefClass(
                                                names = "Confounding Variables"))
             updateModel()
         },
+        addTransform = function(var, fun) {
+            fn <- gsub("x", "%s", fun)
+            nv <- sprintf(fn, var)
+            if (! nv %in% variables )
+                variables <<- c(variables, nv)
+            setExplVars()
+        },
         showTab = function(x = c("plot", "summary")) {
             x <- match.arg(x)
             svalue(GUI$plotWidget$plotNb) <<-
@@ -438,7 +456,7 @@ iNZightRegMod <- setRefClass(
 
             updatePlot()
         },
-        updatePlot = function() {
+        updatePlot = function() {                  
             if (plottype %in% 1:7) {
                 if (svalue(showBoots) && plottype %in% 5:6) {
                     if (plottype == 5) {
@@ -449,6 +467,8 @@ iNZightRegMod <- setRefClass(
                 } else {
                     iNZightRegression::plotlm6(fit, which = plottype, showBootstraps = svalue(showBoots))
                 }
+            } else if (plottype == 8) {
+                plot(10:1, main = "Partial residual plot")
             } else {
                 plot(1:10)
             }
