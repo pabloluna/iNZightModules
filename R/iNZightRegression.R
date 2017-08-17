@@ -528,15 +528,21 @@ iNZightRegMod <- setRefClass(
         rule = function(char = "-") {
             addOutput("", paste0(rep(char, 80), collapse = ""), "")
         },
+        modelVars = function() {
+            if (is.null(fit)) return(character())
+            names(fit$model)[-1]
+        },
         numericVars = function(index = FALSE) {
-            ind <- which(sapply(data()[variables], is.numeric))
-            if (!index) return(variables[ind])
-            ind
+            names(which(attr(fit$terms, "dataClasses")[-1] == "numeric"))
+            ## ind <- which(sapply(data()[modelVars()], is.numeric))
+            ## if (!index) return(modelVars()[ind])
+            ## ind
         },
         factorVars = function(index = FALSE) {
-            ind <- which(!sapply(data()[variables], is.numeric))
-            if (!index) return(variables[ind])
-            ind
+            names(which(attr(fit$terms, "dataClasses")[-1] == "factor"))
+            ## ind <- which(!sapply(data()[modelVars()], is.numeric))
+            ## if (!index) return(modelVars()[ind])
+            ## ind
         },
         updateModel = function(new = TRUE, save = FALSE) {
             if (working) return()
