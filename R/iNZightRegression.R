@@ -25,7 +25,8 @@ iNZightRegMod <- setRefClass(
         fit         = "ANY", summaryOutput = "character",
         fits        = "list",
         working     = "logical",
-        plottype    = "numeric", showBoots = "ANY"
+        showBoots   = "ANY",
+        plottype    = "numeric", numVarList = "ANY", catVarList = "ANY"
     ),
     methods = list(
         initialize = function(GUI) {
@@ -292,7 +293,8 @@ iNZightRegMod <- setRefClass(
             ## ---------------------------------------------------------------------------------------------------------
             ## Model options
             
-            modelGp <- gexpandgroup("Models", horizontal = FALSE, container = mainGrp)
+            modelGp <- gexpandgroup("Manage Saved Models", horizontal = FALSE, container = mainGrp)
+            visible(modelGp) <- FALSE
             modelGp$set_borderwidth(10)
             modelTbl <- glayout(homogeneous = TRUE, container = modelGp)
             ii <- 1
@@ -354,46 +356,56 @@ iNZightRegMod <- setRefClass(
             ## ---------------------------------------------------------------------------------------------------------
             ## Plot options
             
-            plotGp <- gexpandgroup("Additional Options (Plots, Comparisons, ...)", horizontal = FALSE, container = mainGrp)
+            plotGp <- gexpandgroup("Model/Residual Plots, Factor Comparisons", horizontal = FALSE, container = mainGrp)
             visible(plotGp) <- FALSE
             plotGp$set_borderwidth(10)
-            plotTbl <- glayout(homogeneous = TRUE, container = plotGp)
+            plotTbl <- glayout(homogeneous = TRUE, container = plotGp, expand = TRUE)
             ii <- 1
+
+            showBoots <<- gcheckbox("Show bootstraps", checked = nrow(data()) >= 30 && nrow(data()) < 4000,
+                                    handler = function(h, ...) updatePlot())
+            plotTbl[ii, 3:6, anchor = c(-1, 0)] <- showBoots
+            ii <- ii + 1
 
             lbl <- glabel("Residual plots :")
             plotTypeList <- gcombobox(c("Residual", "Scale-Location", "Leverage", "Cook's Distance",
-                                        "Normal Q-Q", "Histogram", "Summary Matrix", "Partial Residual"),
+                                        "Normal Q-Q", "Histogram", "Summary Matrix", "Partial Residual",
+                                        "Factor Comparisons"),
                                       handler = function(h, ...) {
                                           plottype <<- svalue(h$obj, index = TRUE)
                                           updatePlot()
                                       })
-            plotTbl[ii, 1:2, anchor = c(1, 0), expand = TRUE] <- lbl
-            plotTbl[ii, 3:6, expand = TRUE, fill = TRUE] <- plotTypeList
+            plotTbl[ii, 1:2, anchor = c(1, 0)] <- lbl
+            plotTbl[ii, 3:6, expand = TRUE] <- plotTypeList
             ii <- ii + 1
 
-            showBoots <<- gcheckbox("Show bootstraps", checked = nrow(data()) >= 30 && nrow(data()) < 4000,
-                                    handler = function(h, ...) updatePlot())
-            plotTbl[ii, 3:6, anchor = c(-1, 0), fill = TRUE] <- showBoots
+            numVarList <<- gcombobox("", handler = function(h, ...) updatePlot())
+            visible(numVarList) <<- FALSE
+            plotTbl[ii, 3:6, expand = TRUE] <- numVarList
+
+
+            catVarList <<- gcombobox("", handler = function(h, ...) updatePlot())
+            visible(catVarList) <<- FALSE
+            plotTbl[ii, 3:6, expand = TRUE] <- catVarList
             ii <- ii + 1
+           
+            
+            ## addSpace(plotGp, 10)
+            ## compTbl <- glayout(homogeneous = TRUE, container = plotGp, expand = TRUE)
+            ## ii <- 1
+            
+            ## compMatrix <- gbutton("Comparison Matrix",
+            ##                       handler = function(h, ...) {
+                                      
+            ##                       })
+            ## compPlot <- gbutton("Comparison Plot",
+            ##                     handler = function(h, ...) {
 
+            ##                     })
 
-            compMatrix <- gbutton("Comparison Matrix",
-                                  handler = function(h, ...) {
-
-                                  })
-            compPlot <- gbutton("Comparison Plot",
-                                handler = function(h, ...) {
-
-                                })
-            #partialResPlot <- gbutton("Partial Residual Plot",
-            #                          handler = function(h, ...) {
-            #
-            #})
-            plotTbl[ii, 1:3, expand = TRUE, fill = TRUE] <- compMatrix
-            plotTbl[ii, 4:6, expand = TRUE, fill = TRUE] <- compPlot
-            ii <- ii + 1
-            #plotTbl[ii, 4:6, expand = TRUE, fill = TRUE] <- partialResPlot
-            #ii <- ii + 1
+            ## compTbl[ii, 1:3, expand = TRUE] <- compMatrix
+            ## compTbl[ii, 4:6, expand = TRUE] <- compPlot
+            ## ii <- ii + 1
             
             
 
@@ -454,10 +466,9 @@ iNZightRegMod <- setRefClass(
             addOutput(font.attr = list(), "",
                       "1. Select a response variable from the drop down.",
                       "2a. Double-click variables in the Available Variables box to add them to the model.",
-                      "2b. or Drag-and-drop variables from the Available Variables box to either of the explanatory or counfounding variables boxes.",
-                      "3. Right-click variables to select and apply a transformation.",
-                      "4. Drag-and-drop a variable in the Explanatory Variables box to another in the same box to create an interaction.",
-                      "5. Double-click variables in the Explanatory Variables box to remove them from the model.")
+                      "    OR Drag-and-drop variables from the Available Variables box to one of the variable boxes.",
+                      "3. Right-click variables to select and apply a transformations or interactions.",
+                      "4. Double-click variables in the Explanatory Variables box to remove them from the model.")
             rule()
 
             working <<- FALSE
@@ -517,6 +528,16 @@ iNZightRegMod <- setRefClass(
         rule = function(char = "-") {
             addOutput("", paste0(rep(char, 80), collapse = ""), "")
         },
+        numericVars = function(index = FALSE) {
+            ind <- which(sapply(data()[variables], is.numeric))
+            if (!index) return(variables[ind])
+            ind
+        },
+        factorVars = function(index = FALSE) {
+            ind <- which(!sapply(data()[variables], is.numeric))
+            if (!index) return(variables[ind])
+            ind
+        },
         updateModel = function(new = TRUE, save = FALSE) {
             if (working) return()
 
@@ -524,8 +545,7 @@ iNZightRegMod <- setRefClass(
             dataset <- data()
             if (new) {
                 mcall <- iNZightTools::fitModel(response, xexpr, data = "dataset",
-                                                family = switch(responseType, "gaussian", "binomial", "poisson"),
-                                                na.action = na.exclude)
+                                                family = switch(responseType, "gaussian", "binomial", "poisson"))
                 fit <<- try(eval(parse(text = mcall)), TRUE)
             }
             
@@ -572,7 +592,11 @@ iNZightRegMod <- setRefClass(
 
             updatePlot()
         },
-        updatePlot = function() {                  
+        updatePlot = function() {
+            dev.hold()
+            on.exit(dev.flush())
+            visible(catVarList) <<- visible(numVarList) <<- FALSE
+            
             if (plottype %in% 1:7) {
                 if (svalue(showBoots) && plottype %in% 5:6) {
                     if (plottype == 5) {
@@ -584,9 +608,47 @@ iNZightRegMod <- setRefClass(
                     iNZightRegression::plotlm6(fit, which = plottype, showBootstraps = svalue(showBoots))
                 }
             } else if (plottype == 8) {
-                plot(10:1, main = "Partial residual plot")
+                numvars <- numericVars()
+                if (length(numvars) == 0) {
+                    numvars <- ""
+                    plot(NA, xlim = 0:1, ylim = 0:1, bty = "n", type = "n", xaxt = "n", yaxt = "n",
+                         xlab = "", ylab = "", main = "")
+                    text(0.5, 0.5, "Partial residual plots require\nat least one numeric expanatory variable", cex = 2)
+                }
+                ## Set options for the dropdown
+                blockHandlers(numVarList)
+                pvar <- svalue(numVarList, index = FALSE)
+                numVarList$set_items(numvars)
+                svalue(numVarList, index = TRUE) <<-
+                    if (length(pvar) == 1 && pvar %in% numvars) which(numvars == pvar) else 1
+                unblockHandlers(numVarList)
+                
+                visible(numVarList) <<- length(numvars) > 1
+                if (svalue(numVarList) != "")
+                    iNZightRegression::partialResPlot(fit, svalue(numVarList, index = FALSE),
+                                                      showBootstraps = svalue(showBoots))
+            } else if (plottype == 9) {
+                catvars <- factorVars()
+                if (length(catvars) == 0) {
+                    catvars <- ""
+                    plot(NA, xlim = 0:1, ylim = 0:1, bty = "n", type = "n", xaxt = "n", yaxt = "n",
+                         xlab = "", ylab = "", main = "")
+                    text(0.5, 0.5, "Comparison plots require\nat least one categorical variable", cex = 2)
+                }
+                blockHandlers(catVarList)
+                cvar <- svalue(catVarList, index = FALSE)
+                catVarList$set_items(catvars)
+                svalue(catVarList, index = TRUE) <<-
+                    if (length(cvar) == 1 && cvar %in% catvars) which(catvars == cvar) else 1
+                unblockHandlers(catVarList)
+
+                visible(catVarList) <<- length(catvars) > 1
+                if (svalue(catVarList) != "")
+                    plot(iNZightMR::moecalc(fit, svalue(catVarList, index = FALSE)))
             } else {
-                plot(1:10)
+                plot(NA, xlim = 0:1, ylim = 0:1, bty = "n", type = "n", xaxt = "n", yaxt = "n",
+                     xlab = "", ylab = "", main = "")
+                text(0.5, 0.5, "No Model", cex = 2)
             }
         }
     )
