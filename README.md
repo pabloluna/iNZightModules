@@ -1,5 +1,5 @@
-# iNZightModules
-### Add-on modules for iNZight
+# iNZightModules: Add-on modules for iNZight
+[![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](http://www.gnu.org/licenses/gpl-3.0)
 
 This R package contains add-on modules for iNZight, each of which targets some particular application.
 The modules connect to a related `R` package, which will be downloaded as it is needed (to reduce the size of the iNZightVIT download).
