@@ -19,4 +19,3 @@ selecting the "primary variable of interest"
 \author{
 Tom Elliott
 }
-

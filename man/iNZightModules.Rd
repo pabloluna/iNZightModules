@@ -14,4 +14,3 @@ Tom Elliott, Eric Lim, Junjie Zeng, Simon Potter, Dineika Chandranada, David Ban
 
 Maintainer: Tom Elliott <inzight_support@stat.auckland.ac.nz>
 }
-

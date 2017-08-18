@@ -20,4 +20,3 @@ User selects variables, they are drawn.
 \author{
 iNZight Team
 }
-

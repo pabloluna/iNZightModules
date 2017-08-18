@@ -2,8 +2,8 @@
 % Please edit documentation in R/iNZightMaps.R
 \docType{class}
 \name{iNZightMapMod-class}
-\alias{iNZightMapMod}
 \alias{iNZightMapMod-class}
+\alias{iNZightMapMod}
 \title{iNZight Maps Module}
 \description{
 iNZight Mapping Module
@@ -11,7 +11,7 @@ iNZight Mapping Module
 \details{
 Opens a UI for visualising geographical data
 }
+
 \author{
 Tom Elliott
 }
-

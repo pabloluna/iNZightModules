@@ -2,8 +2,8 @@
 % Please edit documentation in R/iNZightTS.R
 \docType{class}
 \name{iNZightTSMod-class}
-\alias{iNZightTSMod}
 \alias{iNZightTSMod-class}
+\alias{iNZightTSMod}
 \title{iNZight Time Series Module}
 \description{
 iNZight Time Series Module
@@ -11,7 +11,7 @@ iNZight Time Series Module
 \details{
 A GUI add-on for visualising and doing basic inference and prediction of time series data.
 }
+
 \author{
 Eric Lim
 }
-

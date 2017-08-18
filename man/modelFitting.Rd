@@ -19,4 +19,3 @@ attaching to the Global Environment.
 \author{
 Tom Elliott
 }
-

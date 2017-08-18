@@ -25,7 +25,8 @@ iNZightRegMod <- setRefClass(
         fit         = "ANY", summaryOutput = "character",
         fits        = "list",
         working     = "logical",
-        plottype    = "numeric", showBoots = "ANY"
+        showBoots   = "ANY",
+        plottype    = "numeric", numVarList = "ANY", catVarList = "ANY"
     ),
     methods = list(
         initialize = function(GUI) {
@@ -94,11 +95,11 @@ iNZightRegMod <- setRefClass(
 
 
 
-            variableGp <- gframe("Explanatory Variables", horizontal = FALSE, container = mainGrp)
+            variableGp <- gframe("Explanatory Variables (drag+drop/double-click)", horizontal = FALSE, container = mainGrp)
             variableGp$set_borderwidth(10)
             variableTbl <- glayout(homogeneous = TRUE, container = variableGp)
             
-            variableList <<- gtable("")
+            variableList <<- gtable("")#, multiple = TRUE)
             setAvailVars()
             variableTbl[1:3, 1, expand = TRUE] <- variableList
             size(variableList) <<- c(-1, 300)
@@ -111,9 +112,129 @@ iNZightRegMod <- setRefClass(
             setConfVars()
             variableTbl[3, 2, expand = TRUE] <- confounderList
 
-
+            ## Right-click menus
+            transforms <- list("I(x^2)", "I(x^3)", "POWER", "POLY", "log(x)", "sqrt(x)", "OTHER")
+            transformList <- lapply(transforms,
+                                    function(x) {
+                                        if (x == "POWER") {
+                                            return(gaction("x^z: other power ...", handler = function(h, ...) {
+                                                xname <- svalue(variableList, index = FALSE)
+                                                if (!is.numeric(data()[[xname]])) {
+                                                    gmessage("Transformations only available for numeric variables",
+                                                             "error", parent = GUI$win)
+                                                    return()
+                                                }
+                                                zw <- gbasicdialog("Choose order of power", handler=function(h,...) {
+                                                    z <- as.numeric(svalue(zval))
+                                                    if (is.na(z)) gmessage("Order must be a number.", "Invalid Value",
+                                                                           "error", parent = h$obj)
+                                                    else
+                                                        addTransform(xname, paste0("I(x^", z, ")"))
+                                                }, parent = GUI$win)
+                                                zg <- ggroup(cont=zw)
+                                                zt <- glayout(homogeneous = TRUE, container = zg)
+                                                zt[1,1,anchor=c(1,0), expand = TRUE] = glabel(paste0(xname, "^"))
+                                                zt[1,2] = (zval <- gedit(4, width = 4, container = zt))
+                                                out <- visible(zw)
+                                            }))
+                                        }
+                                        if (x == "POLY") {
+                                            return(gaction("polynomial to degree ...", handler = function(h, ...) {
+                                                xname <- svalue(variableList, index = FALSE)
+                                                if (!is.numeric(data()[[xname]])) {
+                                                    gmessage("Transformations only available for numeric variables",
+                                                             "error", parent = GUI$win)
+                                                    return()
+                                                }
+                                                zw <- gbasicdialog("Choose order of polynomial", handler=function(h,...) {
+                                                    z <- as.numeric(svalue(zval))
+                                                    if (is.na(z)) gmessage("Order must be a number.", "Invalid Value",
+                                                                           "error", parent = h$obj)
+                                                    else
+                                                        addTransform(xname, paste0("poly(x, ", z, ")"))
+                                                }, parent = GUI$win)
+                                                zg <- ggroup(cont=zw)
+                                                zt <- glayout(homogeneous = TRUE, container = zg)
+                                                zt[1,1,anchor=c(1,0), expand = TRUE] = glabel(paste0("poly(", xname, ","))
+                                                zt[1,2] = (zval <- gspinbutton(1, 50, 1, value = 2, container = zt))
+                                                zt[1,3, anchor= c(-1,0), expand=TRUE] = glabel(")")
+                                                out <- visible(zw)
+                                            }))
+                                        }
+                                        if (x == "OTHER") {
+                                            return(gaction("Other ...", handler = function(h, ...) {
+                                                xname <- svalue(variableList, index = FALSE)
+                                                if (!is.numeric(data()[[xname]])) {
+                                                    gmessage("Transformations only available for numeric variables",
+                                                             "error", parent = GUI$win)
+                                                    return()
+                                                }
+                                                zw <- gbasicdialog("Specify other transformation", handler=function(h,...) {
+                                                    try(addTransform(sprintf("%s(%s)", svalue(zfun), svalue(zargs))))
+                                                    invisible(NULL)
+                                                }, parent = GUI$win)
+                                                zg <- gvbox(cont=zw)
+                                                zt <- glayout(homogeneous = FALSE, container = zg)
+                                                zfun <- gedit("", width = 10, initial.msg = "function")
+                                                zargs <- gedit(xname, width = 15)
+                                                zt[1,1] <- glabel("Specify transformation :")
+                                                zt[1,2] <- zfun
+                                                zt[1,3] <- glabel("(")
+                                                zt[1,4] <- zargs
+                                                zt[1,5] <- glabel(")")
+                                                glabel("Include comma-separated arguments if necessary", container = zg)
+                                                out <- visible(zw)
+                                            }))
+                                        }
+                                        lbl <- x
+                                        if (grepl("I(", lbl, fixed = TRUE))
+                                            lbl <- gsub(":.+", "", gsub(")", "", gsub("I(", "", lbl, fixed = TRUE), fixed = TRUE))
+                                        gaction(lbl, handler = function(h, ...) {
+                                            xname <- svalue(variableList, index = FALSE)
+                                            if (!is.numeric(data()[[xname]])) {
+                                                gmessage("Transformations only available for numeric variables",
+                                                         "error", parent = GUI$win)
+                                                return()
+                                            }
+                                            addTransform(xname, x)
+                                        })
+                                    })
+            factorTransformList <- list(
+                gaction("Interact ...", handler = function(h, ...) {
+                    xname <- svalue(variableList, index = FALSE)
+                    zw <- gbasicdialog("Create Interaction", handler = function(h, ...) {
+                        vs <- c(xname, svalue(intvar, index = FALSE))
+                        if (svalue(zval) == 0) {
+                            vtxt <- paste(vs, collapse = " * ")
+                        } else {
+                            vtxt <- sprintf("(%s)^%s", paste(vs, collapse = " + "), svalue(zval)+1)
+                        }
+                        addTransform(vtxt)
+                    })
+                    zg <- gvbox(container = zw)
+                    size(zw) <- c(280, 400)
+                    glabel(sprintf("Choose variables to interact with %s\n(CTRL to select many)", xname),
+                           container = zg)
+                    vs <- variableList$get_items()
+                    intvar <- gtable(vs[vs != xname], multiple = TRUE, container = zg)
+                    zg2 <- ggroup(container = zg)
+                    glabel("How many interaction terms?\n(0 = all) :", container = zg2)
+                    zval <- gspinbutton(0, length(svalue(intvar)), 1, container = zg2)
+                    enabled(zval) <- length(svalue(intvar)) > 0
+                    ## when interactions chosen, change upper limit of zval
+                    addHandlerSelectionChanged(intvar, handler = function(h, ...) {
+                        n <- length(svalue(h$obj))
+                        zval$set_items(0:n)
+                        enabled(zval) <- n > 0
+                        invisible(NULL)
+                    })
+                    out <- visible(zw)
+                })
+            )
+            addRightclickPopupMenu(variableList, c(transformList, list(gseparator()), factorTransformList))
+            
             ## Drag-and-drop behaviour
-            addDropSource(variableList, handler = function(h, ...) {
+            addDropSource(variableList, type="object",handler = function(h, ...) {
                 varname <- svalue(h$obj)
                 attr(varname, "from") <- "avail"
                 varname
@@ -137,13 +258,13 @@ iNZightRegMod <- setRefClass(
             
             addDropTarget(explanatoryList, handler =  function(h, ...) {
                 varname <- h$dropdata
-                if (varname %in% variables) return()
+                if (varname %in% c(variables, confounding)) return()
                 variables <<- c(variables, varname)
                 setExplVars()
             })
             addDropTarget(confounderList, handler = function(h, ...) {
                 varname <- h$dropdata
-                if (varname %in% confounding ) return()
+                if (varname %in% c(variables, confounding)) return()
                 confounding <<- c(confounding, varname)
                 setConfVars()
             })
@@ -151,15 +272,18 @@ iNZightRegMod <- setRefClass(
             ## double click behaviour
             addHandlerDoubleclick(variableList, handler = function(h, ...) {
                 varname <- svalue(h$obj)
+                if (length(varname) != 1) return()
                 if (varname %in% c(variables, confounding)) return()
                 variables <<- c(variables, varname)
                 setExplVars()
             })
             addHandlerDoubleclick(explanatoryList, handler = function(h, ...) {
+                if (length(svalue(h$obj)) != 1) return()
                 variables <<- variables[variables != svalue(h$obj)]
                 setExplVars()
             })
             addHandlerDoubleclick(confounderList, handler = function(h, ...) {
+                if (length(svalue(h$obj)) != 1) return()
                 confounding <<- confounding[confounding != svalue(h$obj)]
                 setConfVars()
             })
@@ -169,7 +293,8 @@ iNZightRegMod <- setRefClass(
             ## ---------------------------------------------------------------------------------------------------------
             ## Model options
             
-            modelGp <- gframe("Models", horizontal = FALSE, container = mainGrp)
+            modelGp <- gexpandgroup("Manage Saved Models", horizontal = FALSE, container = mainGrp)
+            visible(modelGp) <- FALSE
             modelGp$set_borderwidth(10)
             modelTbl <- glayout(homogeneous = TRUE, container = modelGp)
             ii <- 1
@@ -231,45 +356,56 @@ iNZightRegMod <- setRefClass(
             ## ---------------------------------------------------------------------------------------------------------
             ## Plot options
             
-            plotGp <- gexpandgroup("Additional Options", horizontal = FALSE, container = mainGrp)
+            plotGp <- gexpandgroup("Model/Residual Plots, Factor Comparisons", horizontal = FALSE, container = mainGrp)
+            visible(plotGp) <- FALSE
             plotGp$set_borderwidth(10)
-            plotTbl <- glayout(homogeneous = TRUE, container = plotGp)
+            plotTbl <- glayout(homogeneous = TRUE, container = plotGp, expand = TRUE)
             ii <- 1
+
+            showBoots <<- gcheckbox("Show bootstraps", checked = nrow(data()) >= 30 && nrow(data()) < 4000,
+                                    handler = function(h, ...) updatePlot())
+            plotTbl[ii, 3:6, anchor = c(-1, 0)] <- showBoots
+            ii <- ii + 1
 
             lbl <- glabel("Residual plots :")
             plotTypeList <- gcombobox(c("Residual", "Scale-Location", "Leverage", "Cook's Distance",
-                                        "Normal Q-Q", "Histogram", "Summary Matrix"),
+                                        "Normal Q-Q", "Histogram", "Summary Matrix", "Partial Residual",
+                                        "Factor Comparisons"),
                                       handler = function(h, ...) {
                                           plottype <<- svalue(h$obj, index = TRUE)
                                           updatePlot()
                                       })
-            plotTbl[ii, 1:2, anchor = c(1, 0), expand = TRUE] <- lbl
-            plotTbl[ii, 3:6, expand = TRUE, fill = TRUE] <- plotTypeList
+            plotTbl[ii, 1:2, anchor = c(1, 0)] <- lbl
+            plotTbl[ii, 3:6, expand = TRUE] <- plotTypeList
             ii <- ii + 1
 
-            showBoots <<- gcheckbox("Show bootstraps", checked = nrow(data()) >= 30 && nrow(data()) < 4000,
-                                    handler = function(h, ...) updatePlot())
-            plotTbl[ii, 3:6, anchor = c(-1, 0), fill = TRUE] <- showBoots
+            numVarList <<- gcombobox("", handler = function(h, ...) updatePlot())
+            visible(numVarList) <<- FALSE
+            plotTbl[ii, 3:6, expand = TRUE] <- numVarList
+
+
+            catVarList <<- gcombobox("", handler = function(h, ...) updatePlot())
+            visible(catVarList) <<- FALSE
+            plotTbl[ii, 3:6, expand = TRUE] <- catVarList
             ii <- ii + 1
+           
+            
+            ## addSpace(plotGp, 10)
+            ## compTbl <- glayout(homogeneous = TRUE, container = plotGp, expand = TRUE)
+            ## ii <- 1
+            
+            ## compMatrix <- gbutton("Comparison Matrix",
+            ##                       handler = function(h, ...) {
+                                      
+            ##                       })
+            ## compPlot <- gbutton("Comparison Plot",
+            ##                     handler = function(h, ...) {
 
+            ##                     })
 
-            compMatrix <- gbutton("Comparison Matrix",
-                                  handler = function(h, ...) {
-
-                                  })
-            compPlot <- gbutton("Comparison Plot",
-                                handler = function(h, ...) {
-
-                                })
-            partialResPlot <- gbutton("Partial Residual Plot",
-                                      handler = function(h, ...) {
-
-                                      })
-            plotTbl[ii, 1:3, expand = TRUE, fill = TRUE] <- compMatrix
-            plotTbl[ii, 4:6, expand = TRUE, fill = TRUE] <- compPlot
-            ii <- ii + 1
-            plotTbl[ii, 4:6, expand = TRUE, fill = TRUE] <- partialResPlot
-            ii <- ii + 1
+            ## compTbl[ii, 1:3, expand = TRUE] <- compMatrix
+            ## compTbl[ii, 4:6, expand = TRUE] <- compPlot
+            ## ii <- ii + 1
             
             
 
@@ -330,10 +466,9 @@ iNZightRegMod <- setRefClass(
             addOutput(font.attr = list(), "",
                       "1. Select a response variable from the drop down.",
                       "2a. Double-click variables in the Available Variables box to add them to the model.",
-                      "2b. or Drag-and-drop variables from the Available Variables box to either of the explanatory or counfounding variables boxes.",
-                      "3. Right-click variables to select and apply a transformation.",
-                      "4. Drag-and-drop a variable in the Explanatory Variables box to another in the same box to create an interaction.",
-                      "5. Double-click variables in the Explanatory Variables box to remove them from the model.")
+                      "    OR Drag-and-drop variables from the Available Variables box to one of the variable boxes.",
+                      "3. Right-click variables to select and apply a transformations or interactions.",
+                      "4. Double-click variables in the Explanatory Variables box to remove them from the model.")
             rule()
 
             working <<- FALSE
@@ -371,6 +506,15 @@ iNZightRegMod <- setRefClass(
                                                names = "Confounding Variables"))
             updateModel()
         },
+        addTransform = function(var, fun) {
+            if (!missing(fun)) {
+                fn <- gsub("x", "%s", fun)
+                nv <- sprintf(fn, var)
+            } else nv <- var
+            if (! nv %in% variables )
+                variables <<- c(variables, nv)
+            setExplVars()
+        },
         showTab = function(x = c("plot", "summary")) {
             x <- match.arg(x)
             svalue(GUI$plotWidget$plotNb) <<-
@@ -383,6 +527,22 @@ iNZightRegMod <- setRefClass(
         },
         rule = function(char = "-") {
             addOutput("", paste0(rep(char, 80), collapse = ""), "")
+        },
+        modelVars = function() {
+            if (is.null(fit)) return(character())
+            names(fit$model)[-1]
+        },
+        numericVars = function(index = FALSE) {
+            names(which(attr(fit$terms, "dataClasses")[-1] == "numeric"))
+            ## ind <- which(sapply(data()[modelVars()], is.numeric))
+            ## if (!index) return(modelVars()[ind])
+            ## ind
+        },
+        factorVars = function(index = FALSE) {
+            names(which(attr(fit$terms, "dataClasses")[-1] == "factor"))
+            ## ind <- which(!sapply(data()[modelVars()], is.numeric))
+            ## if (!index) return(modelVars()[ind])
+            ## ind
         },
         updateModel = function(new = TRUE, save = FALSE) {
             if (working) return()
@@ -405,6 +565,8 @@ iNZightRegMod <- setRefClass(
             addOutput(paste0("# Summary of ", modelname, ": ", response, " ~ ", xexpr))
             if (inherits(fit, "try-error")) {
                 addOutput("Unable to fit model.")
+                rule()
+                return()
             } else {
                 wd <- options()$width
                 options(width = 200)
@@ -433,9 +595,14 @@ iNZightRegMod <- setRefClass(
             
             rule()
 
+
             updatePlot()
         },
         updatePlot = function() {
+            dev.hold()
+            on.exit(dev.flush())
+            visible(catVarList) <<- visible(numVarList) <<- FALSE
+            
             if (plottype %in% 1:7) {
                 if (svalue(showBoots) && plottype %in% 5:6) {
                     if (plottype == 5) {
@@ -446,8 +613,48 @@ iNZightRegMod <- setRefClass(
                 } else {
                     iNZightRegression::plotlm6(fit, which = plottype, showBootstraps = svalue(showBoots))
                 }
+            } else if (plottype == 8) {
+                numvars <- numericVars()
+                if (length(numvars) == 0) {
+                    numvars <- ""
+                    plot(NA, xlim = 0:1, ylim = 0:1, bty = "n", type = "n", xaxt = "n", yaxt = "n",
+                         xlab = "", ylab = "", main = "")
+                    text(0.5, 0.5, "Partial residual plots require\nat least one numeric expanatory variable", cex = 2)
+                }
+                ## Set options for the dropdown
+                blockHandlers(numVarList)
+                pvar <- svalue(numVarList, index = FALSE)
+                numVarList$set_items(numvars)
+                svalue(numVarList, index = TRUE) <<-
+                    if (length(pvar) == 1 && pvar %in% numvars) which(numvars == pvar) else 1
+                unblockHandlers(numVarList)
+                
+                visible(numVarList) <<- length(numvars) > 1
+                if (svalue(numVarList) != "")
+                    iNZightRegression::partialResPlot(fit, svalue(numVarList, index = FALSE),
+                                                      showBootstraps = svalue(showBoots))
+            } else if (plottype == 9) {
+                catvars <- factorVars()
+                if (length(catvars) == 0) {
+                    catvars <- ""
+                    plot(NA, xlim = 0:1, ylim = 0:1, bty = "n", type = "n", xaxt = "n", yaxt = "n",
+                         xlab = "", ylab = "", main = "")
+                    text(0.5, 0.5, "Comparison plots require\nat least one categorical variable", cex = 2)
+                }
+                blockHandlers(catVarList)
+                cvar <- svalue(catVarList, index = FALSE)
+                catVarList$set_items(catvars)
+                svalue(catVarList, index = TRUE) <<-
+                    if (length(cvar) == 1 && cvar %in% catvars) which(catvars == cvar) else 1
+                unblockHandlers(catVarList)
+
+                visible(catVarList) <<- length(catvars) > 1
+                if (svalue(catVarList) != "")
+                    plot(iNZightMR::moecalc(fit, svalue(catVarList, index = FALSE)))
             } else {
-                plot(1:10)
+                plot(NA, xlim = 0:1, ylim = 0:1, bty = "n", type = "n", xaxt = "n", yaxt = "n",
+                     xlab = "", ylab = "", main = "")
+                text(0.5, 0.5, "No Model", cex = 2)
             }
         }
     )

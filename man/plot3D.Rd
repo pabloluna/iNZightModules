@@ -15,4 +15,3 @@ Plot 3D: Three-dimentional, interactive graphics
 \details{
 Allows users to plot three continuous variables, as well as one categorical variable.
 }
-

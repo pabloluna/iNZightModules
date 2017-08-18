@@ -2,8 +2,8 @@
 % Please edit documentation in R/iNZightRegression.R
 \docType{class}
 \name{iNZightRegMod-class}
-\alias{iNZightRegMod}
 \alias{iNZightRegMod-class}
+\alias{iNZightRegMod}
 \title{iNZight Model Fitting Module}
 \description{
 iNZight Model Fitting Module
@@ -11,7 +11,7 @@ iNZight Model Fitting Module
 \details{
 A GUI add-on for fitting regression models.
 }
+
 \author{
 Tom Elliott
 }
-

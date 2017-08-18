@@ -2,8 +2,8 @@
 % Please edit documentation in R/iNZightMultiRes.R
 \docType{class}
 \name{iNZightMultiRes-class}
-\alias{iNZightMultiRes}
 \alias{iNZightMultiRes-class}
+\alias{iNZightMultiRes}
 \title{iNZight Multiple Response Module}
 \description{
 iNZight Multiple Response Module
@@ -13,7 +13,7 @@ Opens a UI for visualising multiple-response data.
 That is, the question form: "Select all that apply".
 Imagine checking checkboxes (as opposed to a radio button).
 }
+
 \author{
 Eric Lim
 }
-
