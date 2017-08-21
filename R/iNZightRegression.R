@@ -110,7 +110,7 @@ iNZightRegMod <- setRefClass(
 
             explanatoryList <<- gtable("")
             setExplVars()
-            variableTbl[1:7, 2, expand = TRUE] <- explanatoryList
+            variableTbl[2:8, 2, expand = TRUE] <- explanatoryList
 
             confounderList <<- gtable("")
             setConfVars()
@@ -123,7 +123,7 @@ iNZightRegMod <- setRefClass(
             btnEdit <- gbutton(stock.id = "", handler = function(h, ...) {
 
             }, container = pnlControls, tooltip = "Modify Variable (Transform, etc)")
-            btnEdit$set_icon("edit")
+            btnEdit$set_icon("properties")
             addSpace(pnlControls, 5)
             btnUp <- iNZight:::gimagebutton(stock.id = "up", handler = function(h, ...) {
                 w <- svalue(explanatoryList, index = TRUE)
@@ -146,7 +146,7 @@ iNZightRegMod <- setRefClass(
                 setExplVars()
                 svalue(explanatoryList, index = TRUE) <<- w+1
             }, container = pnlControls, tooltip = "Move Variable Down")
-            variableTbl[8, 2, expand = TRUE] <- pnlControls
+            variableTbl[1, 2, expand = TRUE] <- pnlControls
 
             ## Right-click menus
             
@@ -158,6 +158,7 @@ iNZightRegMod <- setRefClass(
                        function(x) {
                            if (x == "SEP") return(gseparator())
                            if (var != "x") x <- gsub("x", var, x)
+                           wx <- svalue(box, TRUE)
                            if (x == "POWER") {
                                return(gaction(sprintf("%s^z: other power ...", var), handler = function(h, ...) {
                                    xname <- svalue(box, index = FALSE)
@@ -165,8 +166,10 @@ iNZightRegMod <- setRefClass(
                                        z <- as.numeric(svalue(zval))
                                        if (is.na(z)) gmessage("Order must be a number.", "Invalid Value",
                                                               "error", parent = h$obj)
-                                       else
+                                       else {
                                            addTransform(xname, paste0("I(", var, "^", z, ")"), replace = replace)
+                                           if (replace) svalue(box, TRUE) <<- wx
+                                       }
                                    }, parent = GUI$win)
                                    zg <- ggroup(cont=zw)
                                    zt <- glayout(homogeneous = TRUE, container = zg)
@@ -182,8 +185,10 @@ iNZightRegMod <- setRefClass(
                                        z <- as.numeric(svalue(zval))
                                        if (is.na(z)) gmessage("Order must be a number.", "Invalid Value",
                                                               "error", parent = h$obj)
-                                       else
+                                       else {
                                            addTransform(xname, paste0("poly(", var, ", ", z, ")"), replace = replace)
+                                           if (replace) svalue(box, TRUE) <<- wx
+                                       }
                                    }, parent = GUI$win)
                                    zg <- ggroup(cont=zw)
                                    zt <- glayout(homogeneous = TRUE, container = zg)
@@ -198,6 +203,7 @@ iNZightRegMod <- setRefClass(
                                    xname <- svalue(box, index = FALSE)
                                    zw <- gbasicdialog("Specify other transformation", handler=function(h,...) {
                                        try(addTransform(sprintf("%s(%s)", svalue(zfun), svalue(zargs)), replace = replace))
+                                       if (replace) svalue(box, TRUE) <<- wx
                                        invisible(NULL)
                                    }, parent = GUI$win)
                                    zg <- gvbox(cont=zw)
@@ -221,10 +227,12 @@ iNZightRegMod <- setRefClass(
                            gaction(lbl, handler = function(h, ...) {
                                xname <- svalue(box, index = FALSE)
                                addTransform(xname, x, replace = replace)
+                               if (replace) svalue(box, TRUE) <<- wx
                            })
                        })
             
-            factorTransformList <- function(var = "x", box, replace = FALSE)
+            factorTransformList <- function(var = "x", box, replace = FALSE) {
+                wx <- svalue(box, TRUE)
                 list("Reset baseline ..." = 
                          if (var == "x") {
                              gaction("Reset baseline ...", handler = function(h, ...) {
@@ -232,6 +240,7 @@ iNZightRegMod <- setRefClass(
                                  zw <- gbasicdialog("Create Interaction", handler = function(h, ...) {
                                      ref <- svalue(lev, index = FALSE)                         
                                      try(addTransform(xname, sprintf("relevel(x, \"%s\")", ref), replace = replace))
+                                     if (replace) svalue(box, TRUE) <<- wx
                                      invisible(NULL)
                                  })
                                  zg <- gvbox(container = zw)
@@ -246,12 +255,13 @@ iNZightRegMod <- setRefClass(
                              lapply(levels(data()[[var]]), function(lvl) {
                                  gaction(lvl, handler = function(h, ...) {
                                      try(addTransform(var, sprintf("relevel(x, \"%s\")", lvl), replace = replace))
+                                     if (replace) svalue(box, TRUE) <<- wx
                                      invisible(NULL)
                                  })
                              })
                          }
-                     
-                )
+                     )
+            }
             
             interactList <- function(box) {
                 list(gaction("Interact with ...", handler = function(h, ...) {
