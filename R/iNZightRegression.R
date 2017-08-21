@@ -18,9 +18,10 @@ iNZightRegMod <- setRefClass(
         smryOut     = "ANY",
         regPlots    = "ANY",
         response    = "character", responseType = "numeric",
-        variableList = "ANY",
+        contVarBox  = "ANY", catVarBox = "ANY",
         variables   = "character", explanatoryList = "ANY",
         confounding = "character", confounderList = "ANY",
+        btnEditSig  = "ANY",
         modelName   = "ANY", modelList = "ANY",
         fit         = "ANY", summaryOutput = "character",
         fits        = "list",
@@ -98,110 +99,131 @@ iNZightRegMod <- setRefClass(
             variableGp <- gframe("Explanatory Variables (drag+drop/double-click)", horizontal = FALSE, container = mainGrp)
             variableGp$set_borderwidth(10)
             variableTbl <- glayout(homogeneous = TRUE, container = variableGp)
-            
-            variableList <<- gtable("")#, multiple = TRUE)
+
+            contVarBox <<- gtable("")
+            catVarBox <<- gtable("")
             setAvailVars()
-            variableTbl[1:3, 1, expand = TRUE] <- variableList
-            size(variableList) <<- c(-1, 300)
+            variableTbl[1:6, 1, expand = TRUE] <- contVarBox
+            variableTbl[7:12, 1, expand = TRUE] <- catVarBox
+            size(contVarBox) <<- c(-1, 150)
+            size(catVarBox) <<- c(-1, 150)
 
             explanatoryList <<- gtable("")
             setExplVars()
-            variableTbl[1:2, 2, expand = TRUE] <- explanatoryList
+            variableTbl[1:7, 2, expand = TRUE] <- explanatoryList
 
             confounderList <<- gtable("")
             setConfVars()
-            variableTbl[3, 2, expand = TRUE] <- confounderList
+            variableTbl[9:12, 2, expand = TRUE] <- confounderList
+
+
+            ## Right-panel controls (up/down/edit)
+            pnlControls <- ggroup()
+            addSpring(pnlControls)
+            btnEdit <- gbutton(stock.id = "", handler = function(h, ...) {
+
+            }, container = pnlControls, tooltip = "Modify Variable (Transform, etc)")
+            btnEdit$set_icon("edit")
+            addSpace(pnlControls, 5)
+            btnUp <- iNZight:::gimagebutton(stock.id = "up", handler = function(h, ...) {
+                w <- svalue(explanatoryList, index = TRUE)
+                if (length(w) != 1 || w == 1) return(NULL)
+                ord <- seq_along(variables)
+                ord[w-1] <- w
+                ord[w] <- w-1
+                variables <<- variables[ord]
+                setExplVars()
+                svalue(explanatoryList, index = TRUE) <<- w-1
+            }, container = pnlControls, tooltip = "Move Variable Up")
+            addSpace(pnlControls, 5)
+            btnDown <- iNZight:::gimagebutton(stock.id = "down", handler = function(h, ...) {
+                w <- svalue(explanatoryList, index = TRUE)
+                if (length(w) != 1 || w == length(variables)) return(NULL)
+                ord <- seq_along(variables)
+                ord[w+1] <- w
+                ord[w] <- w+1
+                variables <<- variables[ord]
+                setExplVars()
+                svalue(explanatoryList, index = TRUE) <<- w+1
+            }, container = pnlControls, tooltip = "Move Variable Down")
+            variableTbl[8, 2, expand = TRUE] <- pnlControls
 
             ## Right-click menus
+            
+            ## - for numeric variables:
             transforms <- list("I(x^2)", "I(x^3)", "POWER", "POLY", "log(x)", "sqrt(x)", "OTHER")
-            transformList <- lapply(transforms,
-                                    function(x) {
-                                        if (x == "POWER") {
-                                            return(gaction("x^z: other power ...", handler = function(h, ...) {
-                                                xname <- svalue(variableList, index = FALSE)
-                                                if (!is.numeric(data()[[xname]])) {
-                                                    gmessage("Transformations only available for numeric variables",
-                                                             "error", parent = GUI$win)
-                                                    return()
-                                                }
-                                                zw <- gbasicdialog("Choose order of power", handler=function(h,...) {
-                                                    z <- as.numeric(svalue(zval))
-                                                    if (is.na(z)) gmessage("Order must be a number.", "Invalid Value",
-                                                                           "error", parent = h$obj)
-                                                    else
-                                                        addTransform(xname, paste0("I(x^", z, ")"))
-                                                }, parent = GUI$win)
-                                                zg <- ggroup(cont=zw)
-                                                zt <- glayout(homogeneous = TRUE, container = zg)
-                                                zt[1,1,anchor=c(1,0), expand = TRUE] = glabel(paste0(xname, "^"))
-                                                zt[1,2] = (zval <- gedit(4, width = 4, container = zt))
-                                                out <- visible(zw)
-                                            }))
-                                        }
-                                        if (x == "POLY") {
-                                            return(gaction("polynomial to degree ...", handler = function(h, ...) {
-                                                xname <- svalue(variableList, index = FALSE)
-                                                if (!is.numeric(data()[[xname]])) {
-                                                    gmessage("Transformations only available for numeric variables",
-                                                             "error", parent = GUI$win)
-                                                    return()
-                                                }
-                                                zw <- gbasicdialog("Choose order of polynomial", handler=function(h,...) {
-                                                    z <- as.numeric(svalue(zval))
-                                                    if (is.na(z)) gmessage("Order must be a number.", "Invalid Value",
-                                                                           "error", parent = h$obj)
-                                                    else
-                                                        addTransform(xname, paste0("poly(x, ", z, ")"))
-                                                }, parent = GUI$win)
-                                                zg <- ggroup(cont=zw)
-                                                zt <- glayout(homogeneous = TRUE, container = zg)
-                                                zt[1,1,anchor=c(1,0), expand = TRUE] = glabel(paste0("poly(", xname, ","))
-                                                zt[1,2] = (zval <- gspinbutton(1, 50, 1, value = 2, container = zt))
-                                                zt[1,3, anchor= c(-1,0), expand=TRUE] = glabel(")")
-                                                out <- visible(zw)
-                                            }))
-                                        }
-                                        if (x == "OTHER") {
-                                            return(gaction("Other ...", handler = function(h, ...) {
-                                                xname <- svalue(variableList, index = FALSE)
-                                                if (!is.numeric(data()[[xname]])) {
-                                                    gmessage("Transformations only available for numeric variables",
-                                                             "error", parent = GUI$win)
-                                                    return()
-                                                }
-                                                zw <- gbasicdialog("Specify other transformation", handler=function(h,...) {
-                                                    try(addTransform(sprintf("%s(%s)", svalue(zfun), svalue(zargs))))
-                                                    invisible(NULL)
-                                                }, parent = GUI$win)
-                                                zg <- gvbox(cont=zw)
-                                                zt <- glayout(homogeneous = FALSE, container = zg)
-                                                zfun <- gedit("", width = 10, initial.msg = "function")
-                                                zargs <- gedit(xname, width = 15)
-                                                zt[1,1] <- glabel("Specify transformation :")
-                                                zt[1,2] <- zfun
-                                                zt[1,3] <- glabel("(")
-                                                zt[1,4] <- zargs
-                                                zt[1,5] <- glabel(")")
-                                                glabel("Include comma-separated arguments if necessary", container = zg)
-                                                out <- visible(zw)
-                                            }))
-                                        }
-                                        lbl <- x
-                                        if (grepl("I(", lbl, fixed = TRUE))
-                                            lbl <- gsub(":.+", "", gsub(")", "", gsub("I(", "", lbl, fixed = TRUE), fixed = TRUE))
-                                        gaction(lbl, handler = function(h, ...) {
-                                            xname <- svalue(variableList, index = FALSE)
-                                            if (!is.numeric(data()[[xname]])) {
-                                                gmessage("Transformations only available for numeric variables",
-                                                         "error", parent = GUI$win)
-                                                return()
-                                            }
-                                            addTransform(xname, x)
-                                        })
-                                    })
-            factorTransformList <- list(
-                gaction("Interact ...", handler = function(h, ...) {
-                    xname <- svalue(variableList, index = FALSE)
+            transformList <- function(var = "x", replace = FALSE)
+                lapply(transforms,
+                       function(x) {
+                           if (var != "x") x <- gsub("x", var, x)
+                           if (x == "POWER") {
+                               return(gaction(sprintf("%s^z: other power ...", var), handler = function(h, ...) {
+                                   xname <- svalue(contVarBox, index = FALSE)
+                                   zw <- gbasicdialog("Choose order of power", handler=function(h,...) {
+                                       z <- as.numeric(svalue(zval))
+                                       if (is.na(z)) gmessage("Order must be a number.", "Invalid Value",
+                                                              "error", parent = h$obj)
+                                       else
+                                           addTransform(xname, paste0("I(", var, "^", z, ")"))
+                                   }, parent = GUI$win)
+                                   zg <- ggroup(cont=zw)
+                                   zt <- glayout(homogeneous = TRUE, container = zg)
+                                   zt[1,1,anchor=c(1,0), expand = TRUE] = glabel(paste0(xname, "^"))
+                                   zt[1,2] = (zval <- gedit(4, width = 4, container = zt))
+                                   out <- visible(zw)
+                               }))
+                           }
+                           if (x == "POLY") {
+                               return(gaction("polynomial to degree ...", handler = function(h, ...) {
+                                   xname <- svalue(contVarBox, index = FALSE)
+                                   zw <- gbasicdialog("Choose order of polynomial", handler=function(h,...) {
+                                       z <- as.numeric(svalue(zval))
+                                       if (is.na(z)) gmessage("Order must be a number.", "Invalid Value",
+                                                              "error", parent = h$obj)
+                                       else
+                                           addTransform(xname, paste0("poly(", var, ", ", z, ")"))
+                                   }, parent = GUI$win)
+                                   zg <- ggroup(cont=zw)
+                                   zt <- glayout(homogeneous = TRUE, container = zg)
+                                   zt[1,1,anchor=c(1,0), expand = TRUE] = glabel(paste0("poly(", xname, ","))
+                                   zt[1,2] = (zval <- gspinbutton(1, 50, 1, value = 2, container = zt))
+                                   zt[1,3, anchor= c(-1,0), expand=TRUE] = glabel(")")
+                                   out <- visible(zw)
+                               }))
+                           }
+                           if (x == "OTHER") {
+                               return(gaction("Other ...", handler = function(h, ...) {
+                                   xname <- svalue(contVarBox, index = FALSE)
+                                   zw <- gbasicdialog("Specify other transformation", handler=function(h,...) {
+                                       try(addTransform(sprintf("%s(%s)", svalue(zfun), svalue(zargs))))
+                                       invisible(NULL)
+                                   }, parent = GUI$win)
+                                   zg <- gvbox(cont=zw)
+                                   zt <- glayout(homogeneous = FALSE, container = zg)
+                                   zfun <- gedit("", width = 10, initial.msg = "function")
+                                   zargs <- gedit(xname, width = 15)
+                                   
+                                   ## This needs altering
+                                   zt[1,1] <- glabel("Specify transformation :")
+                                   zt[1,2] <- zfun
+                                   zt[1,3] <- glabel("(")
+                                   zt[1,4] <- zargs
+                                   zt[1,5] <- glabel(")")
+                                   glabel("Include comma-separated arguments if necessary", container = zg)
+                                   out <- visible(zw)
+                               }))
+                           }
+                           lbl <- x
+                           if (grepl("I(", lbl, fixed = TRUE))
+                               lbl <- gsub(":.+", "", gsub(")", "", gsub("I(", "", lbl, fixed = TRUE), fixed = TRUE))
+                           gaction(lbl, handler = function(h, ...) {
+                               xname <- svalue(contVarBox, index = FALSE)
+                               addTransform(xname, x, replace = replace)
+                           })
+                       })
+            factorTransformList <- function(box) {
+                list(gaction("Interact with ...", handler = function(h, ...) {
+                    xname <- svalue(box, index = FALSE)
                     zw <- gbasicdialog("Create Interaction", handler = function(h, ...) {
                         vs <- c(xname, svalue(intvar, index = FALSE))
                         if (svalue(zval) == 0) {
@@ -215,7 +237,7 @@ iNZightRegMod <- setRefClass(
                     size(zw) <- c(280, 400)
                     glabel(sprintf("Choose variables to interact with %s\n(CTRL to select many)", xname),
                            container = zg)
-                    vs <- variableList$get_items()
+                    vs <- c(contVarBox$get_items(), catVarBox$get_items())
                     intvar <- gtable(vs[vs != xname], multiple = TRUE, container = zg)
                     zg2 <- ggroup(container = zg)
                     glabel("How many interaction terms?\n(0 = all) :", container = zg2)
@@ -230,11 +252,53 @@ iNZightRegMod <- setRefClass(
                     })
                     out <- visible(zw)
                 })
-            )
-            addRightclickPopupMenu(variableList, c(transformList, list(gseparator()), factorTransformList))
+                )
+            }
+            addRightclickPopupMenu(contVarBox, c(transformList(), list(gseparator()), factorTransformList(contVarBox)))
+            addRightclickPopupMenu(catVarBox, c(factorTransformList(catVarBox)))
+
+
+            enabled(btnUp) <- enabled(btnEdit) <- enabled(btnDown) <- FALSE
+            btnEditSig <<- NULL
+            addHandlerSelectionChanged(explanatoryList, function(h, ...) {
+                enabled(btnEdit) <- length(svalue(h$obj)) == 1
+                enabled(btnUp) <- length(svalue(h$obj)) == 1 && svalue(h$obj, TRUE) > 1
+                enabled(btnDown) <- length(svalue(h$obj)) == 1 && svalue(h$obj, TRUE) < length(variables)
+
+                ## Now set the edit list - remove existing first!
+                if (!is.null(btnEditSig)) {
+                    gSignalHandlerDisconnect(btnEdit$widget, btnEditSig)
+                    btnEditSig <<- NULL
+                }
+                if (length(svalue(h$obj)) != 1) return()
+                vn <- svalue(h$obj, FALSE)
+                if (!vn %in% names(data())) {
+                    ## removing transformation
+                    btnEditSig <<- addPopupMenu(btnEdit, list(gaction("Remove transformation", handler = function(h, ...) {
+                        ## figure out what the variable is ...
+                        v <- svalue(explanatoryList, TRUE)
+                        var <- gsub(".+\\(|,.+|\\).*", "", variables[v])
+                        if (var %in% names(data())) {
+                            variables[v] <<- var
+                            setExplVars()
+                            svalue(explanatoryList, TRUE) <<- v
+                        }
+                    })))
+                } else if (vn %in% numericVars()) {
+                    btnEditSig <<- addPopupMenu(btnEdit, c(transformList(vn, replace = TRUE),
+                                                           gseparator(), factorTransformList(explanatoryList)))
+                } else {
+                    btnEditSig <<- addPopupMenu(btnEdit, c(factorTransformList(explanatoryList)))
+                }
+            })
             
             ## Drag-and-drop behaviour
-            addDropSource(variableList, type="object",handler = function(h, ...) {
+            addDropSource(contVarBox, type="object",handler = function(h, ...) {
+                varname <- svalue(h$obj)
+                attr(varname, "from") <- "avail"
+                varname
+            })
+            addDropSource(catVarBox, type="object",handler = function(h, ...) {
                 varname <- svalue(h$obj)
                 attr(varname, "from") <- "avail"
                 varname
@@ -270,7 +334,14 @@ iNZightRegMod <- setRefClass(
             })
 
             ## double click behaviour
-            addHandlerDoubleclick(variableList, handler = function(h, ...) {
+            addHandlerDoubleclick(contVarBox, handler = function(h, ...) {
+                varname <- svalue(h$obj)
+                if (length(varname) != 1) return()
+                if (varname %in% c(variables, confounding)) return()
+                variables <<- c(variables, varname)
+                setExplVars()
+            })
+            addHandlerDoubleclick(catVarBox, handler = function(h, ...) {
                 varname <- svalue(h$obj)
                 if (length(varname) != 1) return()
                 if (varname %in% c(variables, confounding)) return()
@@ -480,7 +551,7 @@ iNZightRegMod <- setRefClass(
         },
         data = function() GUI$getActiveData(),
         setAvailVars = function() {
-            if (is.null(response)) {
+            if (is.null(response) || length(response) == 0) {
                 vars <- "Select response"
             } else {
                 vars <- names(data()[,-which(names(data()) == response)])
@@ -492,9 +563,13 @@ iNZightRegMod <- setRefClass(
                     confounding <<- confounding[confounding != response]
                     setConfVars()
                 }
+
+                numvars <- sapply(data()[vars], is.numeric, USE.NAMES = FALSE)
+                v1 <- vars[numvars]
+                v2 <- vars[!numvars]
+                contVarBox$set_items(structure(data.frame(v1, stringsAsFactors = FALSE), names = "Numeric Variables"))
+                catVarBox$set_items(structure(data.frame(v2, stringsAsFactors = FALSE), names = "Categorical Variables"))
             }
-            variableList$set_items(structure(data.frame(vars, stringsAsFactors = FALSE),
-                                             names = "Available Variables"))            
         },
         setExplVars = function () {
             explanatoryList$set_items(structure(data.frame(variables, stringsAsFactors = FALSE),
@@ -506,13 +581,16 @@ iNZightRegMod <- setRefClass(
                                                names = "Confounding Variables"))
             updateModel()
         },
-        addTransform = function(var, fun) {
+        addTransform = function(var, fun, replace = FALSE) {
             if (!missing(fun)) {
                 fn <- gsub("x", "%s", fun)
                 nv <- sprintf(fn, var)
             } else nv <- var
-            if (! nv %in% variables )
+            if (replace) {
+                variables[which(variables == var)] <<- nv
+            } else if (! nv %in% variables ) {
                 variables <<- c(variables, nv)
+            }
             setExplVars()
         },
         showTab = function(x = c("plot", "summary")) {
