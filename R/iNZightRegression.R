@@ -186,7 +186,7 @@ iNZightRegMod <- setRefClass(
                                        if (is.na(z)) gmessage("Order must be a number.", "Invalid Value",
                                                               "error", parent = h$obj)
                                        else {
-                                           addTransform(xname, paste0("poly(", var, ", ", z, ")"), replace = replace)
+                                           addTransform(xname, paste0("Poly(", var, ", ", z, ")"), replace = replace)
                                            if (replace) svalue(box, TRUE) <- wx
                                        }
                                    }, parent = GUI$win)
@@ -778,9 +778,9 @@ iNZightRegMod <- setRefClass(
             if (plottype %in% 1:7) {
                 if (svalue(showBoots) && plottype %in% 5:6) {
                     if (plottype == 5) {
-                        iNZightRegression::iNZightQQplot(fit)
+                        iNZightRegression::iNZightQQplot(fit, env = e)
                     } else {
-                        iNZightRegression::histogramArray(fit)
+                        iNZightRegression::histogramArray(fit, env = e)
                     }
                 } else {
                     ## I want to do bootstrapping, therefore I need to pass in the environment
