@@ -13,7 +13,7 @@
 iNZightRegMod <- setRefClass(
     "iNZightRegMod",
     fields = list(
-        GUI         = "ANY",
+        GUI         = "ANY", 
         mainGrp     = "ANY",
         smryOut     = "ANY",
         regPlots    = "ANY",
@@ -27,7 +27,7 @@ iNZightRegMod <- setRefClass(
         fits        = "list",
         working     = "logical",
         showBoots   = "ANY",
-        plottype    = "numeric", numVarList = "ANY", catVarList = "ANY"
+        plottype    = "numeric", numVarList = "ANY", catVarList = "ANY", compMatrix = "ANY"
     ),
     methods = list(
         initialize = function(GUI) {
@@ -61,13 +61,13 @@ iNZightRegMod <- setRefClass(
             ii <-  1
 
             lbl <- glabel("Variable")
-            yVars <- names(data()[, sapply(data(), function(x) is.numeric(x) || length(levels(x)) == 2)])
+            yVars <- names(getdata()[, sapply(getdata(), function(x) is.numeric(x) || length(levels(x)) == 2)])
             responseBox <- gcombobox(yVars, selected = 0,
                                      handler = function(h, ...) {
                                          working <<- TRUE
                                          response <<- svalue(h$obj)
                                          ## detect framework
-                                         y <- data()[[response]]
+                                         y <- getdata()[[response]]
                                          if (is.numeric(y)) {
                                              svalue(responseTypeBox, index = TRUE) <- 1
                                          } else if (length(levels(y)) == 2) {
@@ -168,7 +168,7 @@ iNZightRegMod <- setRefClass(
                                                               "error", parent = h$obj)
                                        else {
                                            addTransform(xname, paste0("I(", var, "^", z, ")"), replace = replace)
-                                           if (replace) svalue(box, TRUE) <<- wx
+                                           if (replace) svalue(box, TRUE) <- wx
                                        }
                                    }, parent = GUI$win)
                                    zg <- ggroup(cont=zw)
@@ -187,7 +187,7 @@ iNZightRegMod <- setRefClass(
                                                               "error", parent = h$obj)
                                        else {
                                            addTransform(xname, paste0("poly(", var, ", ", z, ")"), replace = replace)
-                                           if (replace) svalue(box, TRUE) <<- wx
+                                           if (replace) svalue(box, TRUE) <- wx
                                        }
                                    }, parent = GUI$win)
                                    zg <- ggroup(cont=zw)
@@ -203,7 +203,7 @@ iNZightRegMod <- setRefClass(
                                    xname <- svalue(box, index = FALSE)
                                    zw <- gbasicdialog("Specify other transformation", handler=function(h,...) {
                                        try(addTransform(sprintf("%s(%s)", svalue(zfun), svalue(zargs)), replace = replace))
-                                       if (replace) svalue(box, TRUE) <<- wx
+                                       if (replace) svalue(box, TRUE) <- wx
                                        invisible(NULL)
                                    }, parent = GUI$win)
                                    zg <- gvbox(cont=zw)
@@ -227,7 +227,7 @@ iNZightRegMod <- setRefClass(
                            gaction(lbl, handler = function(h, ...) {
                                xname <- svalue(box, index = FALSE)
                                addTransform(xname, x, replace = replace)
-                               if (replace) svalue(box, TRUE) <<- wx
+                               if (replace) svalue(box, TRUE) <- wx
                            })
                        })
             
@@ -240,22 +240,22 @@ iNZightRegMod <- setRefClass(
                                  zw <- gbasicdialog("Create Interaction", handler = function(h, ...) {
                                      ref <- svalue(lev, index = FALSE)                         
                                      try(addTransform(xname, sprintf("relevel(x, \"%s\")", ref), replace = replace))
-                                     if (replace) svalue(box, TRUE) <<- wx
+                                     if (replace) svalue(box, TRUE) <- wx
                                      invisible(NULL)
                                  })
                                  zg <- gvbox(container = zw)
                                  size(zw) <- c(280, 400)
                                  glabel(sprintf("Choose level of %s to set as baseline", xname),
                                         container = zg)
-                                 vs <- levels(data()[[xname]])
+                                 vs <- levels(getdata()[[xname]])
                                  lev <- gtable(vs, container = zg)
                                  out <- visible(zw)
                              })
                          } else {
-                             lapply(levels(data()[[var]]), function(lvl) {
+                             lapply(levels(getdata()[[var]]), function(lvl) {
                                  gaction(lvl, handler = function(h, ...) {
                                      try(addTransform(var, sprintf("relevel(x, \"%s\")", lvl), replace = replace))
-                                     if (replace) svalue(box, TRUE) <<- wx
+                                     if (replace) svalue(box, TRUE) <- wx
                                      invisible(NULL)
                                  })
                              })
@@ -314,18 +314,34 @@ iNZightRegMod <- setRefClass(
                 }
                 if (length(svalue(h$obj)) != 1) return()
                 vn <- svalue(h$obj, FALSE)
-                if (!vn %in% names(data())) {
-                    ## removing transformation
-                    btnEditSig <<- addPopupMenu(btnEdit, list(gaction("Remove transformation", handler = function(h, ...) {
-                        ## figure out what the variable is ...
-                        v <- svalue(explanatoryList, TRUE)
-                        var <- gsub(".+\\(|,.+|\\).*|\\^.+", "", variables[v])
-                        if (var %in% names(data())) {
-                            variables[v] <<- var
-                            setExplVars()
-                            svalue(explanatoryList, TRUE) <<- v
-                        }
-                    })))
+                if (!vn %in% names(getdata())) {
+                    opts <- list()
+
+                    if (grepl(".+\\*.+", vn)) {
+                        ## It's an interaction!
+                        opts <- c(opts,
+                                  list(gaction("Expand interaction terms", handler = function(h, ...) {
+                                      f <- as.formula(paste0("~", vn))
+
+                                      variables <<- c(variables[-which(variables == vn)],
+                                                      attr(terms.formula(f), "term.labels"))
+                                      setExplVars()
+                                  })))
+                    } else {
+                        ## removing transformation
+                        opts <- c(opts,
+                                  list(gaction("Remove transformation", handler = function(h, ...) {
+                                      ## figure out what the variable is ...
+                                      v <- svalue(explanatoryList, TRUE)
+                                      var <- gsub(".+\\(|,.+|\\).*|\\^.+", "", variables[v])
+                                      if (var %in% names(getdata())) {
+                                          variables[v] <<- var
+                                          setExplVars()
+                                          svalue(explanatoryList, TRUE) <<- v
+                                      }
+                                  })))
+                    }
+                btnEditSig <<- addPopupMenu(btnEdit, opts)
                 } else if (vn %in% numericVars()) {
                     btnEditSig <<- addPopupMenu(btnEdit, c(transformList(vn, box = explanatoryList, replace = TRUE),
                                                            list(gseparator()), interactList(explanatoryList)))
@@ -476,7 +492,7 @@ iNZightRegMod <- setRefClass(
             plotTbl <- glayout(homogeneous = TRUE, container = plotGp, expand = TRUE)
             ii <- 1
 
-            showBoots <<- gcheckbox("Show bootstraps", checked = nrow(data()) >= 30 && nrow(data()) < 4000,
+            showBoots <<- gcheckbox("Show bootstraps", checked = nrow(getdata()) >= 30 && nrow(getdata()) < 4000,
                                     handler = function(h, ...) updatePlot())
             plotTbl[ii, 3:6, anchor = c(-1, 0)] <- showBoots
             ii <- ii + 1
@@ -503,23 +519,15 @@ iNZightRegMod <- setRefClass(
             plotTbl[ii, 3:6, expand = TRUE] <- catVarList
             ii <- ii + 1
            
-            
-            ## addSpace(plotGp, 10)
-            ## compTbl <- glayout(homogeneous = TRUE, container = plotGp, expand = TRUE)
-            ## ii <- 1
-            
-            ## compMatrix <- gbutton("Comparison Matrix",
-            ##                       handler = function(h, ...) {
-                                      
-            ##                       })
-            ## compPlot <- gbutton("Comparison Plot",
-            ##                     handler = function(h, ...) {
-
-            ##                     })
-
-            ## compTbl[ii, 1:3, expand = TRUE] <- compMatrix
-            ## compTbl[ii, 4:6, expand = TRUE] <- compPlot
-            ## ii <- ii + 1
+            compMatrix <<- gbutton("Comparison Matrix",
+                                   handler = function(h, ...) {
+                                       out <- capture.output(iNZightMR::moecalc(fit, svalue(catVarList)))
+                                       addOutput(out)
+                                       rule()
+                                       summaryOutput <<- svalue(smryOut)
+                                   })
+            visible(compMatrix) <<- FALSE
+            plotTbl[ii, 3:6, expand = TRUE] <- compMatrix
             
             
 
@@ -559,31 +567,40 @@ iNZightRegMod <- setRefClass(
 
 
             ## Now create new tab for SUMMARY output:
-            pb.i <- svalue(GUI$plotWidget$plotNb)
             smryOut <<- gtext()
-            add(GUI$plotWidget$plotNb, smryOut, label = "Model Output", close.button = FALSE)
-            svalue(GUI$plotWidget$plotNb) <<- pb.i
-            GUI$plotWidget$closePlot()
+            if (GUI$popOut) {
+                twin <- gwindow("iNZight Model Fitting Output", width = 800, height = 400,
+                                parent = GUI$win)
+                tg <- ggroup(cont = twin)
+                add(tg, smryOut, expand = TRUE, fill = TRUE)
+
+                addInstructions(gtext(expand = TRUE, fill = TRUE,
+                                      container = ggroup(container =
+                                                             gwindow("iNZight Model Fitting Instructions",
+                                                                     width = 800, height = 200, parent = GUI$win))))
+            } else {
+                pb.i <- svalue(GUI$plotWidget$plotNb)
+                add(GUI$plotWidget$plotNb, smryOut, label = "Model Output", close.button = FALSE)
+                svalue(GUI$plotWidget$plotNb) <<- pb.i
+                GUI$plotWidget$closePlot()
+            }
 
             regPlots <<- ggraphics(expand = TRUE)
-            add(GUI$plotWidget$plotNb, regPlots, label = "Model Plots", close.button = FALSE)
-            plot(1:10)
+            if (GUI$popOut) {
+                ## nothing to do?
+            } else {
+                add(GUI$plotWidget$plotNb, regPlots, label = "Model Plots", close.button = FALSE)
+                ## Display instructions in a closable tab
+                inst <- gtext()
+                add(GUI$plotWidget$plotNb, inst, label = "Instructions", close.button = TRUE)
+                addInstructions(inst)
+            }
+            plot(NA, xlim = 0:1, ylim = 0:1, xlab = "", ylab = "", xaxt = "n", yaxt = "n", bty = "n")
+            text(0.5, 0.5, "Select a response variable to begin", cex = 1.2)
+            
 
             ## So now, can swith between text and plot tabs ...
-            showTab("summary")
-
-            ## Some nice text to start off with ...
-            addOutput("\nWelcome to the iNZight Model Fitting Module!",
-                      font.attr = list(weight = "bold"))
-
-            ## Instructions!
-            addOutput(font.attr = list(), "",
-                      "1. Select a response variable from the drop down.",
-                      "2a. Double-click variables in the Available Variables box to add them to the model.",
-                      "    OR Drag-and-drop variables from the Available Variables box to one of the variable boxes.",
-                      "3. Right-click variables to select and apply a transformations or interactions.",
-                      "4. Double-click variables in the Explanatory Variables box to remove them from the model.")
-            rule()
+            showTab("instructions")
 
             working <<- FALSE
             
@@ -592,12 +609,12 @@ iNZightRegMod <- setRefClass(
             ## smry <- capture.output(summary(tmpfit))
             ## addOutput(paste0("Model 1:"), smry)
         },
-        data = function() GUI$getActiveData(),
+        getdata = function() GUI$getActiveData(),
         setAvailVars = function() {
             if (is.null(response) || length(response) == 0) {
                 vars <- "Select response"
             } else {
-                vars <- names(data()[,-which(names(data()) == response)])
+                vars <- names(getdata()[,-which(names(getdata()) == response)])
                 if (length(variables) && response %in% variables) {
                     variables <<- variables[variables != response]
                     setExplVars()
@@ -607,7 +624,7 @@ iNZightRegMod <- setRefClass(
                     setConfVars()
                 }
 
-                numvars <- sapply(data()[vars], is.numeric, USE.NAMES = FALSE)
+                numvars <- sapply(getdata()[vars], is.numeric, USE.NAMES = FALSE)
                 v1 <- vars[numvars]
                 v2 <- vars[!numvars]
                 contVarBox$set_items(structure(data.frame(v1, stringsAsFactors = FALSE), names = "Numeric Variables"))
@@ -636,11 +653,14 @@ iNZightRegMod <- setRefClass(
             }
             setExplVars()
         },
-        showTab = function(x = c("plot", "summary")) {
+        showTab = function(x = c("plot", "summary", "instructions")) {
+            if (GUI$popOut) return(invisible(NULL))
             x <- match.arg(x)
             svalue(GUI$plotWidget$plotNb) <<-
                 which(names(GUI$plotWidget$plotNb) ==
-                      ifelse(x == "plot", "Model Plots", "Model Output"))
+                      switch(x, "plot" = "Model Plots", "summary" = "Model Output",
+                             "instructions" = "Instructions"))
+            invisible(NULL)
         },
         addOutput = function(..., font.attr = list(family = "monospace")) {
             ## showTab("summary")
@@ -655,13 +675,13 @@ iNZightRegMod <- setRefClass(
         },
         numericVars = function(index = FALSE) {
             names(which(attr(fit$terms, "dataClasses")[-1] == "numeric"))
-            ## ind <- which(sapply(data()[modelVars()], is.numeric))
+            ## ind <- which(sapply(getdata()[modelVars()], is.numeric))
             ## if (!index) return(modelVars()[ind])
             ## ind
         },
         factorVars = function(index = FALSE) {
             names(which(attr(fit$terms, "dataClasses")[-1] == "factor"))
-            ## ind <- which(!sapply(data()[modelVars()], is.numeric))
+            ## ind <- which(!sapply(getdata()[modelVars()], is.numeric))
             ## if (!index) return(modelVars()[ind])
             ## ind
         },
@@ -669,7 +689,7 @@ iNZightRegMod <- setRefClass(
             if (working) return()
 
             xexpr <- paste(c(if (length(variables) > 0) variables else "1", confounding), collapse = " + ")
-            dataset <- data()
+            dataset <- getdata()
             if (new) {
                 mcall <- iNZightTools::fitModel(response, xexpr, data = "dataset",
                                                 family = switch(responseType, "gaussian", "binomial", "poisson"))
@@ -691,7 +711,17 @@ iNZightRegMod <- setRefClass(
             } else {
                 wd <- options()$width
                 options(width = 200)
-                addOutput(capture.output(iNZightRegression::iNZightSummary(fit, exclude = if (length(confounding) > 0) confounding else NULL)))
+                fito <- try({
+                    capture.output(iNZightRegression::iNZightSummary(
+                        fit, exclude = if (length(confounding) > 0) confounding else NULL)
+                        )}, silent = TRUE)
+                if (inherits(fito, "try-error"))
+                    fito <- try({
+                        capture.output(summary(fit))
+                    }, TRUE)
+                if (inherits(fito, "try-error"))
+                    fito <- "Unable to obtain summary information for model."
+                addOutput(fito)
                 options(width = wd)
                 ## plot it
                 
@@ -722,7 +752,10 @@ iNZightRegMod <- setRefClass(
         updatePlot = function() {
             dev.hold()
             on.exit(dev.flush())
-            visible(catVarList) <<- visible(numVarList) <<- FALSE
+            visible(compMatrix) <<- visible(catVarList) <<- visible(numVarList) <<- FALSE
+
+            e <- new.env()
+            assign("dataset", getdata(), e)
             
             if (plottype %in% 1:7) {
                 if (svalue(showBoots) && plottype %in% 5:6) {
@@ -732,7 +765,9 @@ iNZightRegMod <- setRefClass(
                         iNZightRegression::histogramArray(fit)
                     }
                 } else {
-                    iNZightRegression::plotlm6(fit, which = plottype, showBootstraps = svalue(showBoots))
+                    ## I want to do bootstrapping, therefore I need to pass in the environment
+                    iNZightRegression::plotlm6(fit, which = plottype,
+                                               showBootstraps = svalue(showBoots), env = e)
                 }
             } else if (plottype == 8) {
                 numvars <- numericVars()
@@ -753,7 +788,7 @@ iNZightRegMod <- setRefClass(
                 visible(numVarList) <<- length(numvars) > 1
                 if (svalue(numVarList) != "")
                     iNZightRegression::partialResPlot(fit, svalue(numVarList, index = FALSE),
-                                                      showBootstraps = svalue(showBoots))
+                                                      showBootstraps = svalue(showBoots), env = e)
             } else if (plottype == 9) {
                 catvars <- factorVars()
                 if (length(catvars) == 0) {
@@ -769,6 +804,7 @@ iNZightRegMod <- setRefClass(
                     if (length(cvar) == 1 && cvar %in% catvars) which(catvars == cvar) else 1
                 unblockHandlers(catVarList)
 
+                visible(compMatrix) <<- TRUE
                 visible(catVarList) <<- length(catvars) > 1
                 if (svalue(catVarList) != "")
                     plot(iNZightMR::moecalc(fit, svalue(catVarList, index = FALSE)))
@@ -777,6 +813,59 @@ iNZightRegMod <- setRefClass(
                      xlab = "", ylab = "", main = "")
                 text(0.5, 0.5, "No Model", cex = 2)
             }
+        },
+        addInstructions = function(where) {
+            insert(where,
+                   "\nWelcome to the iNZight Model Fitting Module!\n",
+                   font.attr = list(weight = "bold", size = 12))
+
+            ## Getting around
+            insert(where, "Getting Around ...\n",
+                   font.attr = list(weight = "bold"))
+            if (GUI$popOut) {
+                sapply(list(
+                    "You can lay out the windows however you like. There should be three plus this one:",
+                    " - The interface: where you chose variables and graphs",
+                    " - Model Output: text/numerical summaries of fitted models are shown in this window",
+                    "        (NOTE: it may be hiding underneath this instructions window)",
+                    " - Model Plots: plots for the chosen model are shown here",
+                    " - And this one: instructions - you can close this window at any time"
+                ), insert, obj = where)
+            } else {
+                sapply(list(
+                    "Use the tabs above to switch between:",
+                    " - Model Output: text/numerical summaries of fitted models are shown here",
+                    " - Model Plots: plots for the chosen model are shown here",
+                    " - Instructions: you can find this text. You may close this tab at any time by clicking the 'X'"
+                ), insert, obj = where)
+            }
+            sapply(list(
+                "",
+                "Response Options: here, you can choose a response variable, modeling framework, and other model options", "",
+                "Explanatory Variables: this is where you construct your variable by choosing variables and applying transformations",
+                " - On the LEFT side you'll find variables available to use in the model, divided into numeric and categorical",
+                " - On the RIGHT side is Variables of Interest (i.e., variables in the model), as well as Confounding Variables (variables that are necessary for the model, but for which the coefficients aren't of interest)", "",
+                "Manage Saved Models: after you've decided on a model, you can save it here so you can quickly come back to it later", "",
+                "Model/Residual Plots: here you can browse the avaialable residual plots etc"
+            ), insert, obj = where)
+            
+            ## Instructions!
+            insert(where, "\n\nTo get started ...\n",
+                   font.attr = list(weight = "bold"))
+            sapply(list(
+                "1. Select a response variable from the drop down under Response Options > Variable", "",
+                "2. Select explanatory variables by adding them from the boxes on the left", "",
+                "  - Double-click variable in the numeric or categorical variables boxes to add them to Variables of Interest box",
+                "  - Drag-and-drop variables from the Available Variables box to either Variables of Interest or Confounding Variables",
+                "  - Use the up/down arrows above the Variables of Interest box to change the order of the selected variable", "",
+                "3. Apply transformations or interactions to variables",
+                "  - Right-click variables in the left-hand boxes and select a transformation to ADD that transformation to the model",
+                "  - Click the properties icon above the Variables of Interest box to MODIFY the transformation for the selected variable", "",
+                "4. Double-click variables in the Explanatory Variables box to remove them from the model", "",
+                "5. Explore plots of the model by selecting them in the Residual Plots section",
+                "",
+                "Note: to add transformations or interactions to confounding variables, first drag the variable to Variables of Interset, apply the transformation, then drag the transformed variable back to confounding."
+            ), insert, obj = where)
         }
     )
 )
