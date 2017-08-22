@@ -19,4 +19,3 @@ which is useful for quickly exploring large data sets.
 \author{
 Tom Elliott
 }
-
