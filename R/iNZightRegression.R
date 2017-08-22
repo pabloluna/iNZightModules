@@ -55,7 +55,7 @@ iNZightRegMod <- setRefClass(
             
             ## ---------------------------------------------------------------------------------------------------------
             ## Here lies the left panel
-            responseGp <- gframe("Response Options", horizontal = FALSE, container = mainGrp)
+            responseGp <- gexpandgroup("Response Options", horizontal = FALSE, container = mainGrp)
             responseGp$set_borderwidth(10)
             responseTbl <- glayout(container = responseGp)
             ii <-  1
@@ -96,7 +96,7 @@ iNZightRegMod <- setRefClass(
 
 
 
-            variableGp <- gframe("Explanatory Variables (drag+drop/double-click)", horizontal = FALSE, container = mainGrp)
+            variableGp <- gexpandgroup("Explanatory Variables (drag+drop/double-click)", horizontal = FALSE, container = mainGrp)
             variableGp$set_borderwidth(10)
             variableTbl <- glayout(homogeneous = TRUE, container = variableGp)
 
@@ -268,12 +268,24 @@ iNZightRegMod <- setRefClass(
                     xname <- svalue(box, index = FALSE)
                     zw <- gbasicdialog("Create Interaction", handler = function(h, ...) {
                         vs <- c(xname, svalue(intvar, index = FALSE))
+
+                        if (any(vs %in% variables))
+                            variables <<- variables[-which(variables %in% vs)]
+                        
                         if (svalue(zval) == 0) {
-                            vtxt <- paste(vs, collapse = " * ")
+                            vv <- paste(vs, collapse = " * ")
                         } else {
                             vtxt <- sprintf("(%s)^%s", paste(vs, collapse = " + "), svalue(zval)+1)
+                            f <- as.formula(paste0("~", vtxt))
+                            vv <- attr(terms.formula(f), "term.labels")
                         }
-                        addTransform(vtxt)
+
+                        ## clean up clutter ...
+                        if (any(vv %in% variables))
+                            variables <<- variables[-which(variables %in% vv)]
+                        
+                        variables <<- c(variables, vv)
+                        setExplVars()
                     })
                     zg <- gvbox(container = zw)
                     size(zw) <- c(280, 400)
@@ -404,6 +416,8 @@ iNZightRegMod <- setRefClass(
                 varname <- svalue(h$obj)
                 if (length(varname) != 1) return()
                 if (varname %in% c(variables, confounding)) return()
+                if (any(grepl(sprintf("relevel\\(%s", varname), c(variables, confounding)))) return()
+                if (varname %in% attr(fit$terms, "term.labels")) return()
                 variables <<- c(variables, varname)
                 setExplVars()
             })
@@ -632,6 +646,7 @@ iNZightRegMod <- setRefClass(
             }
         },
         setExplVars = function () {
+            variables <<- unique(variables)
             explanatoryList$set_items(structure(data.frame(variables, stringsAsFactors = FALSE),
                                                 names = "Variables of Interest"))
             updateModel()
@@ -641,11 +656,14 @@ iNZightRegMod <- setRefClass(
                                                names = "Confounding Variables"))
             updateModel()
         },
-        addTransform = function(var, fun, replace = FALSE) {
+        addTransform = function(var, fun, replace = FALSE, remove) {
             if (!missing(fun)) {
                 fn <- gsub("x", "%s", fun)
                 nv <- sprintf(fn, var)
             } else nv <- var
+            ## remove any variables (e.g., when adding interaction)
+            if (!missing(remove) && any(remove %in% variables))
+                variables <<- variables[-which(variables %in% remove)]
             if (replace) {
                 variables[which(variables == var)] <<- nv
             } else if (! nv %in% variables ) {
@@ -804,7 +822,7 @@ iNZightRegMod <- setRefClass(
                     if (length(cvar) == 1 && cvar %in% catvars) which(catvars == cvar) else 1
                 unblockHandlers(catVarList)
 
-                visible(compMatrix) <<- TRUE
+                visible(compMatrix) <<- length(catvars) > 1 || catvars != ""
                 visible(catVarList) <<- length(catvars) > 1
                 if (svalue(catVarList) != "")
                     plot(iNZightMR::moecalc(fit, svalue(catVarList, index = FALSE)))
