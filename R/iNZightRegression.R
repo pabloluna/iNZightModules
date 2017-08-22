@@ -17,7 +17,7 @@ iNZightRegMod <- setRefClass(
         mainGrp     = "ANY",
         smryOut     = "ANY",
         regPlots    = "ANY",
-        response    = "character", responseType = "numeric",
+        response    = "character", responseType = "numeric", responseTransform = "character",
         contVarBox  = "ANY", catVarBox = "ANY",
         variables   = "character", explanatoryList = "ANY",
         confounding = "character", confounderList = "ANY",
@@ -94,6 +94,17 @@ iNZightRegMod <- setRefClass(
             ii <- ii + 1
 
 
+            ## Transform response (Y)
+            lbl <- glabel("Transformation")
+            responseTransformBox <- gcombobox(c("", "log", "exp", "square root", "inverse"), editable = TRUE,
+                                              handler = function(h, ...) {
+                                                  responseTransform <<- svalue(h$obj)
+                                                  updateModel()
+                                              })
+            responseTbl[ii, 1, anchor = c(1, 0), expand = TRUE] <- lbl
+            responseTbl[ii, 2:3, expand = TRUE] <- responseTransformBox
+            ii <- ii + 1
+
 
 
             variableGp <- gexpandgroup("Explanatory Variables (drag+drop/double-click)", horizontal = FALSE, container = mainGrp)
@@ -151,7 +162,7 @@ iNZightRegMod <- setRefClass(
             ## Right-click menus
             
             ## - for numeric variables:
-            transforms <- list("I(x^2)", "I(x^3)", "POWER", "POLY", "log(x)", "sqrt(x)",
+            transforms <- list("I(x^2)", "I(x^3)", "POWER", "POLY", "sqrt(x)", "log(x)", "exp(x)",
                                "SEP", "as.factor(x)", "OTHER")
             transformList <- function(var = "x", box, replace = FALSE)
                 lapply(transforms,
@@ -455,6 +466,7 @@ iNZightRegMod <- setRefClass(
                                         working <<- TRUE
                                         svalue(responseBox) <- obj$response
                                         svalue(responseTypeBox, index = TRUE) <- obj$responseType
+                                        svalue(responseTransformBox, index = FALSE) <- obj$responseTransform
                                         variables <<- obj$variables
                                         setExplVars()
                                         confounding <<- obj$confounding
@@ -708,8 +720,18 @@ iNZightRegMod <- setRefClass(
 
             xexpr <- paste(c(if (length(variables) > 0) variables else "1", confounding), collapse = " + ")
             dataset <- getdata()
+            resp <- response
+            if (length(responseTransform) == 1 && responseTransform != "") {
+                trans <- responseTransform
+                if (trans == "inverse") {
+                    resp <- paste0("1 / ", response)
+                } else {
+                    if (trans == "square root") trans <- "sqrt"
+                    resp <- sprintf("%s(%s)", trans, response)
+                }
+            }
             if (new) {
-                mcall <- iNZightTools::fitModel(response, xexpr, data = "dataset",
+                mcall <- iNZightTools::fitModel(resp, xexpr, data = "dataset",
                                                 family = switch(responseType, "gaussian", "binomial", "poisson"))
                 fit <<- try(eval(parse(text = mcall)), TRUE)
             }
@@ -721,7 +743,7 @@ iNZightRegMod <- setRefClass(
             addOutput(summaryOutput)
             rule()
 
-            addOutput(paste0("# Summary of ", modelname, ": ", response, " ~ ", xexpr))
+            addOutput(paste0("# Summary of ", modelname, ": ", resp, " ~ ", xexpr))
             if (inherits(fit, "try-error")) {
                 addOutput("Unable to fit model.")
                 rule()
@@ -745,6 +767,7 @@ iNZightRegMod <- setRefClass(
                 
                 if (save) {
                     obj <- list(fit = fit, response = response, responseType = responseType,
+                                responseTransform = responseTransform,
                                 variables = variables, confounding = confounding)
                     if (svalue(modelList, index = TRUE) == 1) {
                         ## Creating a new model
