@@ -16,6 +16,14 @@ Let us know what you did to break it so we can fix it, or if there's anything el
 or not see, just let us know!
 
 
+## Patches
+
+### 2.2.0-1, 23/08/2017
+- bug fixes: bootstrapping, residual plots
+- better handling of errors
+- extra features, etc
+
+
 ***
 
 # Version 2.1
