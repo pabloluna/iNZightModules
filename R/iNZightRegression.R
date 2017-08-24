@@ -17,7 +17,8 @@ iNZightRegMod <- setRefClass(
         mainGrp     = "ANY",
         smryOut     = "ANY",
         regPlots    = "ANY",
-        response    = "character", responseType = "numeric", responseTransform = "character",
+        responseBox = "ANY", response = "character",
+        responseType = "numeric", responseTransform = "character",
         contVarBox  = "ANY", catVarBox = "ANY",
         variables   = "character", explanatoryList = "ANY",
         confounding = "character", confounderList = "ANY",
@@ -27,17 +28,49 @@ iNZightRegMod <- setRefClass(
         fits        = "list",
         working     = "logical",
         showBoots   = "ANY",
-        plottype    = "numeric", numVarList = "ANY", catVarList = "ANY", compMatrix = "ANY"
+        plottype    = "numeric", numVarList = "ANY", catVarList = "ANY", compMatrix = "ANY",
+        codehistory = "ANY"
     ),
     methods = list(
         initialize = function(GUI) {
-            initFields(GUI = GUI, working = TRUE, plottype = 1)
+            initFields(GUI = GUI, working = TRUE, plottype = 1, codehistory = NULL)
 
             GUI$initializeModuleWindow(.self)
             mainGrp <<- gvbox(spacing = 10, container = GUI$moduleWindow, expand = TRUE)
             mainGrp$set_borderwidth(5)
-
-            GUI$plotToolbar$update(NULL, refresh = "updatePlot")
+            # character, datasheet, evaluate, history, preview, rlogo, 
+            addhistbtn <- iNZight:::gimagebutton(stock.id = "rlogo", tooltip = "Save code for current plot",
+                                                 handler = function(h, ...) {
+                                                     updatePlot(savecode = TRUE)
+                                                 })
+            showhistbtn <- iNZight:::gimagebutton(stock.id = "history", tooltip = "View code history",
+                                                  handler = function(h, ...) {
+                                                      if (GUI$popOut) {
+                                                          if (is.null(codehistory) || !is.null(svalue(codehistory))) {
+                                                              codehistory <<- gtext("", expand = TRUE, fill = TRUE,
+                                                                                    font.attr = list(family = "monospace"),
+                                                                                    container = ggroup(
+                                                                                        container = gwindow(
+                                                                                            "Code History", width = 800, height = 600,
+                                                                                            parent = GUI$win
+                                                                                        )
+                                                                                    ))
+                                                          }
+                                                      } else {
+                                                          if (is.null(codehistory) || !"Code History" %in% names(GUI$plotWidget$plotNb)) {
+                                                              ## need to create it
+                                                              codehistory <<- gtext("", expand = TRUE, fill = TRUE,
+                                                                                    font.attr = list(family = "monospace"))
+                                                              add(GUI$plotWidget$plotNb, codehistory,
+                                                                  label = "Code History", close.button = TRUE)
+                                                          }
+                                                      }
+                                                      
+                                                      svalue(codehistory) <<- ""
+                                                      sapply(GUI$rhistory$get(), insert, obj = codehistory,
+                                                             font.attr = list(family = "monospace"))
+                                                  })
+            GUI$plotToolbar$update(NULL, refresh = "updatePlot", extra = list(addhistbtn, showhistbtn))
 
             if (!is.null(GUI$moduledata) && !is.null(GUI$moduledata$regression) &&
                 !is.null(GUI$moduledata$regression$fits))
@@ -62,21 +95,21 @@ iNZightRegMod <- setRefClass(
 
             lbl <- glabel("Variable")
             yVars <- names(getdata()[, sapply(getdata(), function(x) is.numeric(x) || length(levels(x)) == 2)])
-            responseBox <- gcombobox(yVars, selected = 0,
-                                     handler = function(h, ...) {
-                                         working <<- TRUE
-                                         response <<- svalue(h$obj)
-                                         ## detect framework
-                                         y <- getdata()[[response]]
-                                         if (is.numeric(y)) {
-                                             svalue(responseTypeBox, index = TRUE) <- 1
-                                         } else if (length(levels(y)) == 2) {
-                                             svalue(responseTypeBox, index = TRUE) <- 2
-                                         }
-                                         ## set explanatory variables
-                                         setAvailVars()
-                                         working <<- FALSE
-                                         updateModel()
+            responseBox <<- gcombobox(yVars, selected = 0,
+                                      handler = function(h, ...) {
+                                          working <<- TRUE
+                                          response <<- svalue(h$obj)
+                                          ## detect framework
+                                          y <- getdata()[[response]]
+                                          if (is.numeric(y)) {
+                                              svalue(responseTypeBox, index = TRUE) <- 1
+                                          } else if (length(levels(y)) == 2) {
+                                              svalue(responseTypeBox, index = TRUE) <- 2
+                                          }
+                                          ## set explanatory variables
+                                          setAvailVars()
+                                          working <<- FALSE
+                                          updateModel()
                                      })
             responseTbl[ii, 1, anchor = c(1, 0), expand = TRUE] <- lbl
             responseTbl[ii, 2:3, expand = TRUE] <- responseBox
@@ -464,7 +497,7 @@ iNZightRegMod <- setRefClass(
                                         }
                                         obj <- fits[[svalue(h$obj, index = TRUE) - 1]]
                                         working <<- TRUE
-                                        svalue(responseBox) <- obj$response
+                                        svalue(responseBox) <<- obj$response
                                         svalue(responseTypeBox, index = TRUE) <- obj$responseType
                                         svalue(responseTransformBox, index = FALSE) <- obj$responseTransform
                                         variables <<- obj$variables
@@ -630,10 +663,7 @@ iNZightRegMod <- setRefClass(
 
             working <<- FALSE
             
-
-            ## tmpfit <- lm(height ~ armspan + gender, data = activeData)
-            ## smry <- capture.output(summary(tmpfit))
-            ## addOutput(paste0("Model 1:"), smry)
+            watchData()
         },
         getdata = function() GUI$getActiveData(),
         setAvailVars = function() {
@@ -730,6 +760,7 @@ iNZightRegMod <- setRefClass(
                     resp <- sprintf("%s(%s)", trans, response)
                 }
             }
+            mcall <- NULL
             if (new) {
                 mcall <- iNZightTools::fitModel(resp, xexpr, data = "dataset",
                                                 family = switch(responseType, "gaussian", "binomial", "poisson"))
@@ -782,6 +813,25 @@ iNZightRegMod <- setRefClass(
                     svalue(modelList) <<- modelname
                     unblockHandlers(modelList)
                     summaryOutput <<- svalue(smryOut)
+
+                    if (!is.null(mcall)) {
+                        fname <- sprintf("fit%s", ifelse(svalue(modelList, TRUE) == 2, "",
+                                                         svalue(modelList, TRUE) - 1))
+                        GUI$rhistory$add(c(sprintf("%s <- %s", fname, mcall),
+                                           sprintf("iNZightSummary(%s%s)", fname,
+                                                   ifelse(length(confounding) == 0, "",
+                                                          sprintf(", exclude = c(\"%s\")",
+                                                                  paste(confounding, collapse = "\",\""))
+                                                          )
+                                                   )
+                                           ),
+                                         keep = TRUE)
+                        if (!is.null(codehistory)) {
+                            svalue(codehistory) <<- ""
+                            sapply(GUI$rhistory$get(), insert, obj = codehistory,
+                                   font.attr = list(family = "monospace"))
+                        }
+                    }
                 }
             }
             
@@ -790,25 +840,33 @@ iNZightRegMod <- setRefClass(
 
             updatePlot()
         },
-        updatePlot = function() {
+        updatePlot = function(savecode = FALSE) {
             dev.hold()
             on.exit(dev.flush())
             visible(compMatrix) <<- visible(catVarList) <<- visible(numVarList) <<- FALSE
 
             e <- new.env()
             assign("dataset", getdata(), e)
+
+            fitn <- sprintf("fit%s",  ifelse(svalue(modelList, TRUE) == 2, "",
+                                             svalue(modelList, TRUE) - 1))
+            fmla <- character()
             
             if (plottype %in% 1:7) {
                 if (svalue(showBoots) && plottype %in% 5:6) {
                     if (plottype == 5) {
                         iNZightRegression::iNZightQQplot(fit, env = e)
+                        fmla <- sprintf("iNZightQQplot(%s)", fitn)
                     } else {
                         iNZightRegression::histogramArray(fit, env = e)
+                        fmla <- sprintf("histogramArray(%s)", fitn)
                     }
                 } else {
                     ## I want to do bootstrapping, therefore I need to pass in the environment
                     iNZightRegression::plotlm6(fit, which = plottype,
                                                showBootstraps = svalue(showBoots), env = e)
+                    fmla <- sprintf("plotlm6(%s, which = %s, showBootstraps = %s)",
+                                    fitn, plottype, ifelse(svalue(showBoots), "TRUE", "FALSE"))
                 }
             } else if (plottype == 8) {
                 numvars <- numericVars()
@@ -827,9 +885,13 @@ iNZightRegMod <- setRefClass(
                 unblockHandlers(numVarList)
                 
                 visible(numVarList) <<- length(numvars) > 1
-                if (svalue(numVarList) != "")
+                if (svalue(numVarList) != "") {
                     iNZightRegression::partialResPlot(fit, svalue(numVarList, index = FALSE),
                                                       showBootstraps = svalue(showBoots), env = e)
+                    fmla <- sprintf("partialResPlot(%s, varname = %s, showBootraps = %s)",
+                                    fitn, svalue(numVarList, index = FALSE),
+                                    ifelse(svalue(showBoots), "TRUE", "FALSE"))
+                }
             } else if (plottype == 9) {
                 catvars <- factorVars()
                 if (length(catvars) == 0) {
@@ -847,12 +909,24 @@ iNZightRegMod <- setRefClass(
 
                 visible(compMatrix) <<- length(catvars) > 1 || catvars != ""
                 visible(catVarList) <<- length(catvars) > 1
-                if (svalue(catVarList) != "")
+                if (svalue(catVarList) != "") {
                     plot(iNZightMR::moecalc(fit, svalue(catVarList, index = FALSE)))
+                    fmla <- sprintf("plot(iNZightMR::moecalc(%s, factorname = %s))",
+                                    fitn, svalue(catVarList, index = FALSE))
+                }
             } else {
                 plot(NA, xlim = 0:1, ylim = 0:1, bty = "n", type = "n", xaxt = "n", yaxt = "n",
                      xlab = "", ylab = "", main = "")
                 text(0.5, 0.5, "No Model", cex = 2)
+            }
+            
+            if (savecode && length(fmla) == 1) {
+                GUI$rhistory$add(fmla, keep = TRUE)
+                if (!is.null(codehistory)) {
+                    svalue(codehistory) <<- ""
+                    sapply(GUI$rhistory$get(), insert, obj = codehistory,
+                           font.attr = list(family = "monospace"))
+                }
             }
         },
         addInstructions = function(where) {
@@ -907,6 +981,37 @@ iNZightRegMod <- setRefClass(
                 "",
                 "Note: to add transformations or interactions to confounding variables, first drag the variable to Variables of Interset, apply the transformation, then drag the transformed variable back to confounding."
             ), insert, obj = where)
+        },
+        watchData = function() {
+            ## append some history stuff too ...
+            GUI$rhistory$add(c("", "## --- Model Fitting --- ##",
+                               "## NOTE: to add code, SAVE the model (under Managed Saved Models)",
+                               "##       and click the R icon in the toolbar to save plot code.", "",
+                               "library(iNZightRegression)"), keep = TRUE, tidy = FALSE)
+            
+            ## watch changes to dataset, then ...
+            GUI$getActiveDoc()$addDataObserver(
+                function() try({
+                    ## 1. update response variable box (-> which should trigger updating everything else)
+                    yVars <- names(getdata()[, sapply(getdata(), function(x) is.numeric(x) || length(levels(x)) == 2)])
+                    blockHandlers(responseBox)
+                    responseBox$set_items(yVars)
+                    unblockHandlers(responseBox)
+                    if (response %in% yVars) {
+                        svalue(responseBox) <<- response
+                    } else {
+                        response <<- NULL
+                        svalue(responseBox) <<- NULL
+                    }
+                    
+                    ## 2. update code history (but don't show it!)
+                    if (!is.null(codehistory)) {
+                        svalue(codehistory) <<- ""
+                        sapply(GUI$rhistory$get(), insert, obj = codehistory,
+                               font.attr = list(family = "monospace"))
+                    }
+                }, silent = TRUE)
+                )
         }
     )
 )
