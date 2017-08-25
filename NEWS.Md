@@ -23,6 +23,9 @@ or not see, just let us know!
 - better handling of errors
 - extra features, etc
 
+### 2.2.0-2, 25/08/2017
+- code history for model fitting module
+- more bug fixes
 
 ***
 
