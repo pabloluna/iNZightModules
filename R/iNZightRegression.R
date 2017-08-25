@@ -605,11 +605,23 @@ iNZightRegMod <- setRefClass(
                                       GUI$moduledata$regression <<- list(fits = fits)
                                       
                                       ## clean up tabs ...
-                                      showTab("plot")
-                                      GUI$plotWidget$closePlot()
-                                      GUI$plotWidget$addPlot()
-                                      showTab("summary")
-                                      GUI$plotWidget$closePlot()
+                                      if ("Model Plots" %in% names(GUI$plotWidget$plotNb)) {
+                                          showTab("plot")
+                                          GUI$plotWidget$closePlot()
+                                          GUI$plotWidget$addPlot()
+                                      }
+                                      if ("Model Output" %in% names(GUI$plotWidget$plotNb)) {
+                                          showTab("summary")
+                                          GUI$plotWidget$closePlot()
+                                      }
+                                      if ("Instructions" %in% names(GUI$plotWidget$plotNb)) {
+                                          showTab("instructions")
+                                          GUI$plotWidget$closePlot()
+                                      }
+
+                                      GUI$rhistory$add(c("", "## End Model Fitting", "SEP"),
+                                                       tidy = FALSE)
+                                      
                                       
                                       ## delete the module window
                                       delete(GUI$leftMain, GUI$leftMain$children[[2]])
@@ -817,7 +829,9 @@ iNZightRegMod <- setRefClass(
                     if (!is.null(mcall)) {
                         fname <- sprintf("fit%s", ifelse(svalue(modelList, TRUE) == 2, "",
                                                          svalue(modelList, TRUE) - 1))
-                        GUI$rhistory$add(c(sprintf("%s <- %s", fname, mcall),
+                        dname <- sprintf("data%s", ifelse(GUI$activeDoc == 1, "", GUI$activeDoc))
+                        GUI$rhistory$add(c(sprintf("%s <- %s", fname,
+                                                   gsub("dataset", dname, mcall)),
                                            sprintf("iNZightSummary(%s%s)", fname,
                                                    ifelse(length(confounding) == 0, "",
                                                           sprintf(", exclude = c(\"%s\")",
